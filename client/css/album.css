@@ -1623,6 +1623,7 @@ img { max-width: 100%; display: block; }
   color: white;
   font: 600 8px/1 var(--ui);
   letter-spacing: .8px;
+  pointer-events: none;
 }
 
 .polaroid:hover img { transform: scale(1.03); }

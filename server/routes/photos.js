@@ -137,6 +137,10 @@ router.post('/', csrf, asyncHandler(async (req, res) => {
     });
     body.secureUrl = body.url;
   }
+  const existingCount = await Photo.countDocuments({ chapterId: body.chapterId });
+  if (typeof body.displayOrder !== 'number') {
+    body.displayOrder = existingCount;
+  }
   const p = await Photo.create(body);
   const chapter = await Chapter.findById(p.chapterId);
   if (chapter && !chapter.coverPhotoId) {

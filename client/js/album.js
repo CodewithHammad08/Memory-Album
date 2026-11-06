@@ -960,25 +960,84 @@ async function uploadPhotos(files, chapterId) {
     <div class="upload-progress" style="margin:20px; flex-direction:column; align-items:center; justify-content:center; height:calc(100% - 40px); gap:16px;">
       <div class="upload-progress-spinner" style="width:40px;height:40px;border-width:4px;"></div>
       <div class="upload-progress-text" id="uploadStatusText">
-        Uploading ${files.length} ${files.length === 1 ? 'memory' : 'memories'} to Cloudinary…
+        Preparing upload of ${files.length} ${files.length === 1 ? 'memory' : 'memories'}…
       </div>
-      <div style="font-family:var(--script);font-size:20px;color:var(--deep);">Please wait ♥</div>
+      <div style="font-family:var(--script);font-size:20px;color:var(--deep);">Saving to Cloudinary ♥</div>
     </div>
   `;
 
+  const statusText = $('#uploadStatusText');
+
   try {
-    const formData = new FormData();
-    formData.append('chapterId', chapterId);
-    files.forEach(f => formData.append('photos', f));
+    let uploadedCount = 0;
 
-    const result = await api('/photos/upload', { method: 'POST', body: formData });
+    // Check if we can use direct Cloudinary signed upload
+    // (Bypasses Vercel 4.5MB payload limit, perfect for videos and high-res photos)
+    let sig = null;
+    try {
+      sig = await api('/photos/upload-signature', { method: 'POST', body: { chapterId } });
+    } catch {
+      sig = null;
+    }
+
+    if (sig && sig.signature && sig.apiKey && sig.cloudName) {
+      // Direct-to-Cloudinary upload loop
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const isVideo = file.type.startsWith('video/');
+        const mediaLabel = isVideo ? 'video' : 'photo';
+        if (statusText) {
+          statusText.textContent = `Uploading ${mediaLabel} ${i + 1} of ${files.length}…`;
+        }
+
+        const cData = new FormData();
+        cData.append('file', file);
+        cData.append('api_key', sig.apiKey);
+        cData.append('timestamp', sig.timestamp);
+        cData.append('signature', sig.signature);
+        cData.append('folder', sig.folder);
+
+        const resourceType = isVideo ? 'video' : 'image';
+        const cloudUrl = `https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`;
+
+        const cRes = await fetch(cloudUrl, { method: 'POST', body: cData });
+        if (!cRes.ok) {
+          const errData = await cRes.json().catch(() => ({}));
+          throw new Error(errData.error?.message || `Cloudinary upload failed (${cRes.status})`);
+        }
+        const cJson = await cRes.json();
+
+        // Register in MongoDB
+        await api('/photos', {
+          method: 'POST',
+          body: {
+            chapterId,
+            cloudinaryPublicId: cJson.public_id,
+            cloudinaryAssetId: cJson.asset_id || '',
+            deliveryType: 'upload',
+            resourceType: cJson.resource_type || (isVideo ? 'video' : 'image'),
+            url: cJson.secure_url || cJson.url,
+            secureUrl: cJson.secure_url || cJson.url,
+            caption: '',
+            frameSize: 'standard',
+            isFavourite: false
+          }
+        });
+        uploadedCount++;
+      }
+    } else {
+      // Fallback server stream upload
+      const formData = new FormData();
+      formData.append('chapterId', chapterId);
+      files.forEach(f => formData.append('photos', f));
+      const result = await api('/photos/upload', { method: 'POST', body: formData });
+      uploadedCount = Array.isArray(result) ? result.length : files.length;
+    }
+
     state.photos = await api(`/photos/chapter/${chapterId}`);
-
-    // Refresh chapters (cover photo may have been auto-set)
     await loadChapters();
-
     renderRightPage(chapter);
-    toast(`✓ ${result.length} ${result.length === 1 ? 'memory' : 'memories'} added to this page! ♥`);
+    toast(`✓ ${uploadedCount} ${uploadedCount === 1 ? 'memory' : 'memories'} added to this page! ♥`);
   } catch (err) {
     renderRightPage(chapter);
     toast(`Upload failed: ${err.message}`);
@@ -990,67 +1049,78 @@ async function uploadPhotos(files, chapterId) {
 // ----------------------------------------------------------------
 
 // ---- DELETE CONFIRMATION MODAL ----
-// Replaces browser confirm() with a styled password-gated modal
+let _pendingDeleteAction = null;
+
 function confirmDelete(message, onConfirm) {
   const overlay = $('#deleteConfirmOverlay');
   const msgEl   = $('#deleteConfirmMsg');
   const pwdEl   = $('#deleteConfirmPassword');
   const errEl   = $('#deleteConfirmError');
-  const btn     = $('#deleteConfirmBtn');
 
-  if (!overlay || !btn) {
-    // Fallback: plain confirm (should never happen in production)
+  if (!overlay) {
     if (window.confirm(message)) onConfirm();
     return;
   }
 
+  _pendingDeleteAction = onConfirm;
   msgEl.textContent = message;
   pwdEl.value       = '';
   errEl.textContent = '';
   openModal('deleteConfirmOverlay');
-
-  // Clone-replace button to remove old listeners
-  const freshBtn = btn.cloneNode(true);
-  btn.parentNode.replaceChild(freshBtn, freshBtn); // no-op guard
-  const targetBtn = $('#deleteConfirmBtn');
-
-  async function handler() {
-    const typed = pwdEl.value;
-    if (!typed) {
-      errEl.textContent = 'Please enter your password.';
-      return;
-    }
-    errEl.textContent = 'Verifying…';
-    try {
-      await api('/auth/verify-password', { method: 'POST', body: { password: typed } });
-      closeModal('deleteConfirmOverlay');
-      targetBtn.removeEventListener('click', handler);
-      onConfirm();
-    } catch {
-      errEl.textContent = 'Incorrect password. Please try again.';
-      pwdEl.value = '';
-      pwdEl.focus();
-    }
-  }
-  targetBtn.addEventListener('click', handler);
-
-  // Also allow Enter key inside password input
-  function enterHandler(ev) {
-    if (ev.key === 'Enter') { ev.preventDefault(); handler(); }
-  }
-  pwdEl.addEventListener('keydown', enterHandler);
-  overlay.addEventListener('modal-close', () => {
-    targetBtn.removeEventListener('click', handler);
-    pwdEl.removeEventListener('keydown', enterHandler);
-  }, { once: true });
+  setTimeout(() => pwdEl.focus(), 80);
 }
+
+// Global click handler for delete confirmation modal button
+$('#deleteConfirmBtn')?.addEventListener('click', async () => {
+  const pwdEl = $('#deleteConfirmPassword');
+  const errEl = $('#deleteConfirmError');
+  const btn   = $('#deleteConfirmBtn');
+  const typed = pwdEl.value.trim();
+
+  if (!typed) {
+    errEl.textContent = 'Please enter your password.';
+    pwdEl.focus();
+    return;
+  }
+
+  errEl.textContent = 'Verifying…';
+  btn.disabled = true;
+
+  try {
+    await api('/auth/verify-password', { method: 'POST', body: { password: typed } });
+    closeModal('deleteConfirmOverlay');
+    btn.disabled = false;
+    const action = _pendingDeleteAction;
+    _pendingDeleteAction = null;
+    if (typeof action === 'function') {
+      await action();
+    }
+  } catch (ex) {
+    btn.disabled = false;
+    errEl.textContent = ex.message || 'Incorrect password. Please try again.';
+    pwdEl.value = '';
+    pwdEl.focus();
+  }
+});
+
+// Allow Enter key to trigger deletion confirmation
+$('#deleteConfirmPassword')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $('#deleteConfirmBtn')?.click();
+  }
+});
 
 // Delegated click on page-right content
 document.addEventListener('click', async e => {
 
   // ---- OPEN LIGHTBOX ----
   const polaroid = e.target.closest('.polaroid');
-  if (polaroid && !polaroid.classList.contains('polaroid--video') && !e.target.closest('.polaroid-action') && !e.target.closest('.polaroid-caption')) {
+  if (polaroid && !e.target.closest('.polaroid-action') && !e.target.closest('.polaroid-caption')) {
+    // If clicking directly on a playable video, let user play/pause without opening lightbox
+    if (e.target.tagName === 'VIDEO' || e.target.closest('video')) {
+      return;
+    }
     const idx = parseInt(polaroid.dataset.photoIdx, 10);
     if (!isNaN(idx)) openLightbox(idx);
     return;
@@ -1218,6 +1288,11 @@ function openLightbox(idx) {
 }
 
 function closeLightbox() {
+  const vidEl = $('#lightboxVideo');
+  if (vidEl) {
+    vidEl.pause();
+    vidEl.src = '';
+  }
   $('#lightbox').classList.remove('is-open');
   $('#lightbox').setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
@@ -1227,8 +1302,31 @@ function renderLightbox() {
   const p   = state.lightList[state.lightIdx];
   if (!p) return;
   const url = p.secureUrl || p.url || '';
-  $('#lightboxImg').src = url;
-  $('#lightboxImg').alt = p.caption || 'Memory photograph';
+  const isVideo = p.resourceType === 'video';
+
+  const imgEl = $('#lightboxImg');
+  const vidEl = $('#lightboxVideo');
+
+  if (isVideo) {
+    if (imgEl) imgEl.style.display = 'none';
+    if (vidEl) {
+      vidEl.style.display = 'block';
+      vidEl.src = url;
+      vidEl.load();
+    }
+  } else {
+    if (vidEl) {
+      vidEl.pause();
+      vidEl.src = '';
+      vidEl.style.display = 'none';
+    }
+    if (imgEl) {
+      imgEl.style.display = 'block';
+      imgEl.src = url;
+      imgEl.alt = p.caption || 'Memory photograph';
+    }
+  }
+
   $('#lightboxCaption').textContent = p.caption || '';
   $('#lightboxPrev').disabled = state.lightIdx <= 0;
   $('#lightboxNext').disabled = state.lightIdx >= state.lightList.length - 1;
