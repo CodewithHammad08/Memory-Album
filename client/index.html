@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f8e5eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Our Story ♥</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&family=Dancing+Script:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/album.css">
+</head>
+<body>
+
+<!-- ===== AMBIENT BACKGROUND ===== -->
+<div class="ambient-bg" aria-hidden="true">
+  <div class="desk-texture"></div>
+  <div class="ambient-light"></div>
+</div>
+
+<!-- ===== LOCK SCREEN ===== -->
+<div id="lockScreen" class="lock-screen">
+  <div class="lock-book" role="main">
+    <div class="lock-book-cover">
+      <div class="lock-cover-pattern"></div>
+      <div class="lock-spine"></div>
+      <div class="lock-ribbon"></div>
+      <div class="lock-content">
+        <div class="lock-emblem">
+          <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" width="60" height="60">
+            <path d="M30 52 C30 52 8 38 8 22 C8 14 14 8 22 8 C26 8 30 12 30 12 C30 12 34 8 38 8 C46 8 52 14 52 22 C52 38 30 52 30 52Z" fill="#D98BA7" opacity="0.8"/>
+            <path d="M30 46 C30 46 12 34 12 22 C12 15 17 11 22 11 C26 11 30 15 30 15 C30 15 34 11 38 11 C43 11 48 15 48 22 C48 34 30 46 30 46Z" fill="#B45F80"/>
+          </svg>
+        </div>
+        <p class="lock-eyebrow">PRIVATE MEMORY ARCHIVE</p>
+        <h1 class="lock-title">Our <em>Story</em></h1>
+        <div class="lock-divider">— ♥ —</div>
+        <p class="lock-subtitle">Some memories are just for us.</p>
+        <div class="lock-note-sticker" aria-hidden="true"><span>for our eyes only</span> ♥</div>
+
+        <form id="loginForm" class="lock-form" novalidate>
+          <div class="lock-field">
+            <label for="loginUsername">Who are you?</label>
+            <div class="user-chips" id="userChips"></div>
+            <input type="text" id="loginUsername" name="username" autocomplete="username" required placeholder="hammad or zubiya">
+          </div>
+          <div class="lock-field">
+            <label for="loginPassword">Secret password</label>
+            <div class="password-wrapper">
+              <input type="password" id="loginPassword" name="password" autocomplete="current-password" required placeholder="Enter your secret…">
+              <button type="button" class="pw-toggle" id="pwToggle" aria-label="Show password">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="lock-field lock-field--optional">
+            <label for="loginPhrase">
+              Encryption phrase <span class="optional-badge">optional</span>
+            </label>
+            <input type="password" id="loginPhrase" name="phrase" autocomplete="off" placeholder="Private phrase (encrypts your notes)">
+          </div>
+          <p class="lock-error" id="loginError" role="alert"></p>
+          <div class="lock-actions">
+            <button type="submit" class="btn-unlock">
+              <span>Unlock Our Story</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <button type="button" class="btn-quick" id="quickUnlockBtn">✨ Quick Open</button>
+          </div>
+          <button type="button" class="register-link" id="toggleRegisterBtn">Create or reset account</button>
+        </form>
+
+        <form id="registerForm" class="lock-form" hidden novalidate>
+          <div class="lock-field">
+            <label for="regUsername">Choose username</label>
+            <input type="text" id="regUsername" required placeholder="Your name (min 3 chars)">
+          </div>
+          <div class="lock-field">
+            <label for="regPassword">Choose password</label>
+            <input type="password" id="regPassword" required placeholder="Choose a secret (min 4 chars)">
+          </div>
+          <p class="lock-error" id="regError" role="alert"></p>
+          <div class="lock-actions">
+            <button type="submit" class="btn-unlock">Save Account ♥</button>
+            <button type="button" class="btn-quick" id="cancelRegisterBtn">Back to Login</button>
+          </div>
+        </form>
+
+        <p class="lock-footer">This keeps our pages between us. ♥</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN ALBUM APP ===== -->
+<div id="albumApp" class="album-app" hidden aria-hidden="true">
+
+  <!-- Floating HUD Controls -->
+  <div class="album-hud" id="albumHud">
+    <div class="hud-left">
+      <button class="hud-btn hud-btn--icon" id="indexBtn" title="Table of Contents">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="hud-title">Our Story <span class="hud-heart">♥</span></span>
+    </div>
+    <div class="hud-center" id="hudPosition">The Cover</div>
+    <div class="hud-right">
+      <button class="hud-btn hud-btn--icon" id="favBtn" title="Favourite Memories">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
+      <button class="hud-btn hud-btn--icon" id="backupBtn" title="Backup & Restore">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="hud-btn hud-btn--icon" id="lockBtn" title="Lock Album">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Album Stage -->
+  <div class="album-stage" id="albumStage">
+
+    <!-- The Physical Album -->
+    <div class="album-book" id="albumBook">
+
+      <!-- Book Shadow -->
+      <div class="book-shadow" aria-hidden="true"></div>
+
+      <!-- === COVER PAGE (always layered above) === -->
+      <div class="book-cover" id="bookCover" aria-label="Album Cover">
+        <div class="cover-spine" aria-hidden="true"></div>
+        <div class="cover-front">
+          <div class="cover-texture" aria-hidden="true"></div>
+          <div class="cover-border-outer"></div>
+          <div class="cover-border-inner"></div>
+          <div class="cover-ribbon-top" aria-hidden="true"></div>
+          <div class="cover-ribbon-bookmark" aria-hidden="true"></div>
+          <div class="cover-emblem" aria-hidden="true">
+            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" width="80" height="80">
+              <path d="M40 68 C40 68 10 50 10 28 C10 17 18 10 28 10 C34 10 40 16 40 16 C40 16 46 10 52 10 C62 10 70 17 70 28 C70 50 40 68 40 68Z" fill="rgba(255,255,255,0.25)"/>
+              <path d="M40 60 C40 60 15 44 15 28 C15 19 22 14 28 14 C34 14 40 20 40 20 C40 20 46 14 52 14 C58 14 65 19 65 28 C65 44 40 60 40 60Z" fill="rgba(255,255,255,0.4)"/>
+            </svg>
+          </div>
+          <div class="cover-text">
+            <div class="cover-monogram" aria-hidden="true"><span>♥</span></div>
+            <p class="cover-eyebrow">VOLUME 01</p>
+            <h1 class="cover-title">Our <em>Story</em></h1>
+            <div class="cover-rule">— ♥ —</div>
+            <p class="cover-quote">Every picture holds a memory.<br>Every memory tells our story.</p>
+            <p class="cover-script">A little collection of us, made with love.</p>
+            <button class="cover-open-btn" id="coverOpenBtn" aria-label="Open the album">
+              Open Our Album
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+          <div class="cover-corner cover-corner--tl" aria-hidden="true">♥</div>
+          <div class="cover-corner cover-corner--tr" aria-hidden="true">✦</div>
+          <div class="cover-corner cover-corner--bl" aria-hidden="true">✦</div>
+          <div class="cover-corner cover-corner--br" aria-hidden="true">♥</div>
+        </div>
+      </div>
+
+      <!-- === DOUBLE-PAGE SPREAD (pages behind cover) === -->
+      <div class="book-spread" id="bookSpread">
+
+        <!-- LEFT PAGE -->
+        <div class="book-page page-left" id="pageLeft">
+          <div class="page-ruled-lines" aria-hidden="true"></div>
+          <div class="page-content" id="pageLeftContent">
+            <!-- Dynamic chapter content rendered here -->
+          </div>
+          <div class="page-number page-number--left" id="pageNumLeft">01</div>
+          <div class="page-corner-nav corner-prev" id="cornerPrev" aria-label="Previous chapter" role="button" tabindex="0"></div>
+        </div>
+
+        <!-- CENTRAL SPINE -->
+        <div class="book-spine-center" aria-hidden="true">
+          <div class="spine-shadow-left"></div>
+          <div class="spine-shadow-right"></div>
+          <div class="spine-band"></div>
+        </div>
+
+        <!-- RIGHT PAGE -->
+        <div class="book-page page-right" id="pageRight">
+          <div class="page-ruled-lines" aria-hidden="true"></div>
+          <div class="page-content" id="pageRightContent">
+            <!-- Dynamic photo content rendered here -->
+          </div>
+          <div class="page-number page-number--right" id="pageNumRight">02</div>
+          <div class="page-corner-nav corner-next" id="cornerNext" aria-label="Next chapter" role="button" tabindex="0"></div>
+        </div>
+
+      </div><!-- end .book-spread -->
+
+      <!-- Page Turn Overlay (animated) -->
+      <div class="page-turn-overlay" id="pageTurnOverlay" aria-hidden="true">
+        <div class="turn-page-front"></div>
+        <div class="turn-page-back"></div>
+      </div>
+
+    </div><!-- end .album-book -->
+
+  </div><!-- end .album-stage -->
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="album-nav" id="albumNav" aria-label="Album navigation">
+    <button class="nav-btn nav-prev" id="navPrev" aria-label="Previous page" disabled>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>Previous</span>
+    </button>
+    <div class="nav-center">
+      <button class="nav-action" id="navAddChapter" title="Add a new chapter">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Chapter
+      </button>
+      <button class="nav-action nav-action--photos" id="navAddPhotos" title="Add photographs">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Add Media
+      </button>
+      <button class="nav-action" id="navAddTextPage" title="Add a text page to this chapter">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 10h16M4 15h10M4 20h10"/></svg>
+        Text Page
+      </button>
+      <button class="nav-action" id="navAddNote" title="Write a note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Write Note
+      </button>
+    </div>
+    <button class="nav-btn nav-next" id="navNext" aria-label="Next page">
+      <span>Next</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </nav>
+
+</div><!-- end #albumApp -->
+
+<!-- ===== INDEX PANEL (slides over) ===== -->
+<div class="index-panel" id="indexPanel" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Table of Contents">
+  <div class="index-backdrop" id="indexBackdrop"></div>
+  <div class="index-sheet">
+    <div class="index-header">
+      <div>
+        <p class="index-eyebrow">THE TABLE OF CONTENTS</p>
+        <h2 class="index-title">The Chapters <em>of Us</em></h2>
+      </div>
+      <button class="index-close" id="indexClose" aria-label="Close index">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Search within index -->
+    <div class="index-search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" id="indexSearch" placeholder="Search memories…" autocomplete="off">
+    </div>
+
+    <div class="index-entries" id="indexEntries">
+      <!-- Dynamically populated -->
+    </div>
+
+    <div class="index-footer">
+      <button class="btn-add-chapter" id="indexAddChapter">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add a New Chapter
+      </button>
+      <button class="btn-backup-album" id="indexBackupBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Archive & Backup
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FAVOURITES PANEL ===== -->
+<div class="favs-panel" id="favsPanel" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Favourite Memories">
+  <div class="favs-backdrop" id="favsBackdrop"></div>
+  <div class="favs-sheet">
+    <div class="favs-header">
+      <div>
+        <p class="index-eyebrow">OUR FAVOURITE MEMORIES</p>
+        <h2 class="index-title">Little Moments, <em>Big Feelings</em></h2>
+      </div>
+      <button class="index-close" id="favsClose" aria-label="Close favourites">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="favs-grid" id="favsGrid">
+      <!-- Dynamically populated -->
+    </div>
+  </div>
+</div>
+
+<!-- ===== LIGHTBOX ===== -->
+<div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="lightbox-backdrop" id="lightboxBackdrop"></div>
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close photo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <button class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Previous photo">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <div class="lightbox-stage" id="lightboxStage">
+    <figure class="lightbox-polaroid">
+      <div class="lightbox-img-wrap">
+        <img id="lightboxImg" src="" alt="">
+      </div>
+      <figcaption id="lightboxCaption" class="lightbox-caption"></figcaption>
+    </figure>
+  </div>
+  <button class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Next photo">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <div class="lightbox-toolbar">
+    <button class="lightbox-action" id="lightboxFav" title="Toggle Favourite">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      Favourite
+    </button>
+    <button class="lightbox-action" id="lightboxCapEdit" title="Edit Caption">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Edit Caption
+    </button>
+    <button class="lightbox-action lightbox-action--danger" id="lightboxDelete" title="Delete Photo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      Delete
+    </button>
+  </div>
+</div>
+
+<!-- Hidden file input for photos -->
+<input type="file" id="globalPhotoInput" accept="image/jpeg,image/png,image/webp,image/heic,image/gif,video/mp4,video/webm,video/quicktime" multiple hidden aria-hidden="true">
+
+<!-- ===== MODALS ===== -->
+
+<!-- Chapter Modal -->
+<div class="modal-overlay" id="chapterModalOverlay" aria-hidden="true">
+  <div class="modal-sheet paper-modal" role="dialog" aria-modal="true" aria-labelledby="chapterModalHeading">
+    <button class="modal-close" data-modal-close="chapterModalOverlay" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <p class="modal-eyebrow">A NEW PAGE IN OUR STORY</p>
+    <h2 id="chapterModalHeading" class="modal-title">Add a <em>Chapter</em></h2>
+    <form id="chapterForm" novalidate>
+      <input type="hidden" id="chapterFormId">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="chapterTitle">Chapter Title *</label>
+          <input type="text" id="chapterTitle" required placeholder="e.g. Our First Date…" maxlength="160">
+        </div>
+      </div>
+      <div class="form-row form-row--2">
+        <div class="form-group">
+          <label for="chapterDate">Date *</label>
+          <input type="date" id="chapterDate" required>
+        </div>
+        <div class="form-group">
+          <label for="chapterLocation">Location</label>
+          <input type="text" id="chapterLocation" placeholder="Upvan Lake…" maxlength="160">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="chapterDesc">A little summary</label>
+        <textarea id="chapterDesc" rows="3" placeholder="A day worth remembering…" maxlength="1200"></textarea>
+      </div>
+      <div class="form-row form-row--2">
+        <div class="form-group">
+          <label for="chapterMood">Mood</label>
+          <select id="chapterMood">
+            <option value="">Choose a feeling…</option>
+            <option>Romantic</option>
+            <option>Fun</option>
+            <option>Peaceful</option>
+            <option>Adventurous</option>
+            <option>Special</option>
+            <option>Random memories</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="chapterCover">Cover photo</label>
+          <label class="file-label" for="chapterCover">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Choose image
+            <input type="file" id="chapterCover" accept="image/jpeg,image/png,image/webp,image/heic,image/gif" hidden>
+          </label>
+          <span class="file-chosen" id="chapterCoverName">No file chosen</span>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Save This Memory ♥</button>
+        <button type="button" class="btn-secondary" data-modal-close="chapterModalOverlay">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Journal Entry Modal -->
+<div class="modal-overlay" id="entryModalOverlay" aria-hidden="true">
+  <div class="modal-sheet paper-modal journal-modal" role="dialog" aria-modal="true" aria-labelledby="entryModalHeading">
+    <button class="modal-close" data-modal-close="entryModalOverlay" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="journal-modal-header">
+      <div class="journal-pen-icon">✒</div>
+      <p class="modal-eyebrow">LITTLE THINGS I REMEMBER</p>
+      <h2 id="entryModalHeading" class="modal-title">Write a <em>Memory</em></h2>
+    </div>
+    <form id="entryForm" novalidate>
+      <input type="hidden" id="entryFormId">
+      <input type="hidden" id="entryFormChapterId">
+      <div class="form-group">
+        <label for="entryTitle">Memory title *</label>
+        <input type="text" id="entryTitle" required placeholder="A little note…" maxlength="160">
+      </div>
+      <div class="form-group">
+        <label for="entryContent">Your memory *</label>
+        <div class="journal-paper">
+          <textarea id="entryContent" required rows="8" placeholder="Write what you never want to forget…" maxlength="5000"></textarea>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="entryQuote">A quote, if you like</label>
+        <input type="text" id="entryQuote" placeholder=""A few words to keep…"" maxlength="300">
+      </div>
+      <div class="form-group">
+        <label for="entryPagePosition">Where should this live?</label>
+        <select id="entryPagePosition">
+          <option value="notes">Chapter notes page</option>
+          <option value="before">Text page before the media</option>
+          <option value="between">Text page between the media</option>
+          <option value="after">Text page after the media</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Keep This Memory ♥</button>
+        <button type="button" class="btn-secondary" data-modal-close="entryModalOverlay">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Caption Edit Modal -->
+<div class="modal-overlay" id="captionModalOverlay" aria-hidden="true">
+  <div class="modal-sheet paper-modal modal-small" role="dialog" aria-modal="true" aria-labelledby="captionModalHeading">
+    <button class="modal-close" data-modal-close="captionModalOverlay" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <p class="modal-eyebrow">CAPTION THIS MEMORY</p>
+    <h2 id="captionModalHeading" class="modal-title">Edit <em>Caption</em></h2>
+    <form id="captionForm" novalidate>
+      <input type="hidden" id="captionPhotoId">
+      <div class="form-group">
+        <label for="captionText">Photo caption</label>
+        <input type="text" id="captionText" placeholder="A sweet word about this memory…" maxlength="300">
+      </div>
+      <div class="form-group">
+        <label for="captionFrameSize">Polaroid size</label>
+        <select id="captionFrameSize">
+          <option value="small">Small — a little keepsake</option>
+          <option value="standard">Standard — just right</option>
+          <option value="large">Large — make it the moment</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Save Memory ♥</button>
+        <button type="button" class="btn-secondary" data-modal-close="captionModalOverlay">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Backup & Restore Modal -->
+<div class="modal-overlay" id="backupModalOverlay" aria-hidden="true">
+  <div class="modal-sheet paper-modal" role="dialog" aria-modal="true" aria-labelledby="backupModalHeading">
+    <button class="modal-close" data-modal-close="backupModalOverlay" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <p class="modal-eyebrow">MEMORY ARCHIVE & PRESERVATION</p>
+    <h2 id="backupModalHeading" class="modal-title">Backup &amp; <em>Restore</em></h2>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">
+      Keep your scrapbook safe forever. Export all chapters, photographs, and notes to a JSON archive, or restore from a previously saved backup file.
+    </p>
+
+    <div style="padding:16px; background:rgba(217,139,167,0.08); border:1px solid rgba(217,139,167,0.3); border-radius:6px; margin-bottom:16px;">
+      <h3 style="font-family:var(--serif); font-size:17px; color:var(--ink); margin-bottom:4px;">1. Export Memory Archive</h3>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Download a complete backup JSON containing every chapter, Cloudinary photo link, and personal note.</p>
+      <button type="button" class="btn-primary" id="exportBackupBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Backup File (.json)
+      </button>
+    </div>
+
+    <div style="padding:16px; background:rgba(255,255,255,0.7); border:1px solid var(--line); border-radius:6px;">
+      <h3 style="font-family:var(--serif); font-size:17px; color:var(--ink); margin-bottom:4px;">2. Restore from Archive</h3>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Select a previously saved <code>.json</code> backup file to import back into your album.</p>
+      <input type="file" id="restoreFileInput" accept=".json,application/json" style="margin-bottom:10px; font-size:12px; width:100%;">
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px; display:inline-flex; align-items:center; gap:6px; color:var(--ink); cursor:pointer;">
+          <input type="checkbox" id="restoreReplaceMode"> Replace existing album (instead of merging)
+        </label>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn-primary" id="runRestoreBtn">Restore Memories ♥</button>
+        <button type="button" class="btn-secondary" data-modal-close="backupModalOverlay">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Scripts -->
+<script src="js/album.js"></script>
+
+</body>
+</html>

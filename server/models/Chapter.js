@@ -1,0 +1,2 @@
+const {Schema,model}=require('mongoose');
+module.exports=model('Chapter',new Schema({title:{type:String,required:true,trim:true,maxlength:160},chapterNumber:{type:Number,index:true},date:{type:Date,required:true,index:true},location:{type:String,trim:true,maxlength:160,default:''},description:{type:String,trim:true,maxlength:1200,default:''},mood:{type:String,enum:['','Romantic','Fun','Peaceful','Adventurous','Special','Random memories'],default:''},coverPhotoId:{type:Schema.Types.ObjectId,ref:'Photo',default:null}},{timestamps:true}));

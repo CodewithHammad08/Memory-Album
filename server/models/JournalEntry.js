@@ -1,0 +1,2 @@
+const {Schema,model}=require('mongoose');
+module.exports=model('JournalEntry',new Schema({chapterId:{type:Schema.Types.ObjectId,ref:'Chapter',required:true,index:true},title:{type:String,required:true,trim:true,maxlength:160},encryptedContent:{type:String,required:true},encryptedQuote:{type:String,default:''},pagePosition:{type:String,enum:['notes','before','between','after'],default:'notes'}},{timestamps:true}));
