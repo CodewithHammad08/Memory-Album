@@ -1,4 +1,5 @@
 require('dotenv').config();
+const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
@@ -21,6 +22,9 @@ for (const key of required) {
 const app = express();
 const production = process.env.NODE_ENV === 'production';
 
+// Trust reverse proxy (Vercel edge / SSL termination)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -30,6 +34,57 @@ app.use(helmet({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use(cookieParser());
+
+// ---- Lazy bootstrap for database & user accounts ----
+let _bootstrapped = false;
+let _bootstrapPromise = null;
+
+async function doBootstrap() {
+  if (_bootstrapped) return;
+  if (_bootstrapPromise) return _bootstrapPromise;
+
+  _bootstrapPromise = (async () => {
+    await connectDatabase(process.env.MONGODB_URI);
+
+    const names = (process.env.SETUP_USERNAMES || process.env.SETUP_USERNAME || 'hammad,zubiya')
+      .split(',')
+      .map(x => x.trim().toLowerCase())
+      .filter(Boolean);
+
+    const setupPass = process.env.SETUP_PASSWORD || 'hamiya@2410';
+    const passwordHash = await bcrypt.hash(setupPass, 12);
+
+    for (const username of names) {
+      const existing = await User.findOne({ username });
+      if (!existing) {
+        await User.create({
+          username,
+          passwordHash,
+          encryptionSalt: crypto.randomBytes(32).toString('base64')
+        });
+        console.info(`✓ Owner account created: ${username} (password: ${setupPass})`);
+      } else {
+        existing.passwordHash = passwordHash;
+        await existing.save();
+        console.info(`✓ Owner account password updated: ${username} (password: ${setupPass})`);
+      }
+    }
+    _bootstrapped = true;
+  })();
+
+  return _bootstrapPromise;
+}
+
+// Middleware: lazily ensure DB connection and user accounts before handling any request
+app.use(async (req, res, next) => {
+  try {
+    await doBootstrap();
+    next();
+  } catch (err) {
+    console.error('Database connection error:', err);
+    res.status(500).json({ error: 'Database connection failed. Please try again.' });
+  }
+});
 
 // Session middleware
 app.use(session({
@@ -57,15 +112,19 @@ app.use('/api/entries', require('./routes/journal'));
 app.use('/api/backup', require('./routes/backup'));
 
 // Serve client assets
+const clientDir = fs.existsSync(path.join(__dirname, '../client'))
+  ? path.join(__dirname, '../client')
+  : path.join(process.cwd(), 'client');
+
 app.get(['/client/index.html', '/client/'], (req, res) => {
   res.redirect(301, '/');
 });
-app.use(express.static(path.join(__dirname, '../client')));
-app.use('/client', express.static(path.join(__dirname, '../client')));
+app.use(express.static(clientDir));
+app.use('/client', express.static(clientDir));
 
 // SPA fallback
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/index.html'));
+  res.sendFile(path.join(clientDir, 'index.html'));
 });
 
 // Error handling
@@ -74,44 +133,21 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message || 'Something went wrong. Please try again.' });
 });
 
-async function bootstrap() {
-  await connectDatabase(process.env.MONGODB_URI);
+// Export for Vercel serverless
+module.exports = app;
 
-  const names = (process.env.SETUP_USERNAMES || process.env.SETUP_USERNAME || 'hammad,zubiya')
-    .split(',')
-    .map(x => x.trim().toLowerCase())
-    .filter(Boolean);
-
-  const setupPass = process.env.SETUP_PASSWORD || 'ourstory';
-  const passwordHash = await bcrypt.hash(setupPass, 12);
-
-  for (const username of names) {
-    const existing = await User.findOne({ username });
-    if (!existing) {
-      await User.create({
-        username,
-        passwordHash,
-        encryptionSalt: crypto.randomBytes(32).toString('base64')
-      });
-      console.info(`✓ Owner account created: ${username} (password: ${setupPass})`);
-    } else {
-      existing.passwordHash = passwordHash;
-      await existing.save();
-      console.info(`✓ Owner account password updated: ${username} (password: ${setupPass})`);
+// Run as standalone server when executed directly (local dev)
+if (require.main === module) {
+  doBootstrap().then(() => {
+    const port = process.env.PORT || 5001;
+    const server = app.listen(port, () => {
+      console.info(`\n♥ Our Story memory album is running at http://localhost:${port}\n`);
+    });
+    for (const signal of ['SIGINT', 'SIGTERM']) {
+      process.on(signal, () => server.close(() => process.exit(0)));
     }
-  }
-
-  const port = process.env.PORT || 5001;
-  const server = app.listen(port, () => {
-    console.info(`\n♥ Our Story memory album is running at http://localhost:${port}\n`);
+  }).catch(err => {
+    console.error('Startup failed:', err.message);
+    process.exit(1);
   });
-
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.on(signal, () => server.close(() => process.exit(0)));
-  }
 }
-
-bootstrap().catch(err => {
-  console.error('Startup failed:', err.message);
-  process.exit(1);
-});

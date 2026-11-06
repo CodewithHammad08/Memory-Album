@@ -43,7 +43,7 @@
           <div class="lock-field">
             <label for="loginUsername">Who are you?</label>
             <div class="user-chips" id="userChips"></div>
-            <input type="text" id="loginUsername" name="username" autocomplete="username" required placeholder="hammad or zubiya">
+            <input type="text" id="loginUsername" name="username" autocomplete="username" required placeholder="Choose your name below">
           </div>
           <div class="lock-field">
             <label for="loginPassword">Secret password</label>
@@ -54,36 +54,12 @@
               </button>
             </div>
           </div>
-          <div class="lock-field lock-field--optional">
-            <label for="loginPhrase">
-              Encryption phrase <span class="optional-badge">optional</span>
-            </label>
-            <input type="password" id="loginPhrase" name="phrase" autocomplete="off" placeholder="Private phrase (encrypts your notes)">
-          </div>
           <p class="lock-error" id="loginError" role="alert"></p>
           <div class="lock-actions">
             <button type="submit" class="btn-unlock">
               <span>Unlock Our Story</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
-            <button type="button" class="btn-quick" id="quickUnlockBtn">✨ Quick Open</button>
-          </div>
-          <button type="button" class="register-link" id="toggleRegisterBtn">Create or reset account</button>
-        </form>
-
-        <form id="registerForm" class="lock-form" hidden novalidate>
-          <div class="lock-field">
-            <label for="regUsername">Choose username</label>
-            <input type="text" id="regUsername" required placeholder="Your name (min 3 chars)">
-          </div>
-          <div class="lock-field">
-            <label for="regPassword">Choose password</label>
-            <input type="password" id="regPassword" required placeholder="Choose a secret (min 4 chars)">
-          </div>
-          <p class="lock-error" id="regError" role="alert"></p>
-          <div class="lock-actions">
-            <button type="submit" class="btn-unlock">Save Account ♥</button>
-            <button type="button" class="btn-quick" id="cancelRegisterBtn">Back to Login</button>
           </div>
         </form>
 
@@ -502,6 +478,24 @@
         <button type="button" class="btn-primary" id="runRestoreBtn">Restore Memories ♥</button>
         <button type="button" class="btn-secondary" data-modal-close="backupModalOverlay">Close</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteConfirmOverlay" aria-hidden="true">
+  <div class="modal-sheet paper-modal modal-small" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmHeading">
+    <p class="modal-eyebrow">CONFIRM DELETION</p>
+    <h2 id="deleteConfirmHeading" class="modal-title">Are you <em>sure?</em></h2>
+    <p id="deleteConfirmMsg" style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;"></p>
+    <div class="form-group">
+      <label for="deleteConfirmPassword">Type your password to confirm</label>
+      <input type="password" id="deleteConfirmPassword" placeholder="Enter password…" autocomplete="off">
+    </div>
+    <p class="lock-error" id="deleteConfirmError" role="alert"></p>
+    <div class="form-actions">
+      <button type="button" class="btn-primary" id="deleteConfirmBtn" style="background:linear-gradient(135deg,#c0392b,#922b21);border-color:#922b21;">Delete Forever</button>
+      <button type="button" class="btn-secondary" data-modal-close="deleteConfirmOverlay">Cancel</button>
     </div>
   </div>
 </div>

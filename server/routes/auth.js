@@ -58,29 +58,10 @@ router.post('/login', loginLimit, asyncHandler(async (req, res) => {
   });
 }));
 
-router.post('/quick-unlock', asyncHandler(async (req, res) => {
-  let user = await User.findOne({});
-  if (!user) {
-    // create default user
-    const passwordHash = await bcrypt.hash('ourstory', 12);
-    user = await User.create({
-      username: 'hammad',
-      passwordHash,
-      encryptionSalt: crypto.randomBytes(32).toString('base64')
-    });
-  }
-
-  req.session.regenerate(err => {
-    if (err) throw err;
-    req.session.userId = user._id;
-    req.session.csrfToken = crypto.randomBytes(32).toString('hex');
-    res.json({
-      ok: true,
-      csrfToken: req.session.csrfToken,
-      user: { id: user._id, username: user.username }
-    });
-  });
-}));
+// Quick-unlock disabled in production
+router.post('/quick-unlock', (req, res) => {
+  res.status(403).json({ error: 'Quick unlock is disabled.' });
+});
 
 router.post('/register', loginLimit, asyncHandler(async (req, res) => {
   const { username, password } = req.body || {};

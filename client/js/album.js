@@ -190,9 +190,7 @@ $('#loginForm')?.addEventListener('submit', async e => {
   err.textContent = '';
   const username = $('#loginUsername').value.trim();
   const password = $('#loginPassword').value;
-  const phrase   = $('#loginPhrase').value;
   try {
-    if (phrase) await CryptoVault.unlock(phrase);
     const r = await api('/auth/login', { method: 'POST', body: { username, password } });
     state.csrf = r.csrfToken;
     state.user = r.user;
@@ -201,46 +199,10 @@ $('#loginForm')?.addEventListener('submit', async e => {
   } catch (ex) { err.textContent = ex.message; }
 });
 
-// Quick unlock
-$('#quickUnlockBtn')?.addEventListener('click', async () => {
-  $('#loginError').textContent = '';
-  try {
-    const r = await api('/auth/quick-unlock', { method: 'POST' });
-    state.csrf = r.csrfToken;
-    state.user = r.user;
-    await onAuthenticated();
-    toast('Our Story is open! ♥');
-  } catch (ex) { $('#loginError').textContent = ex.message; }
-});
-
 // Password toggle
 $('#pwToggle')?.addEventListener('click', () => {
   const inp = $('#loginPassword');
   inp.type = inp.type === 'password' ? 'text' : 'password';
-});
-
-// Register / reset
-$('#toggleRegisterBtn')?.addEventListener('click', () => {
-  $('#loginForm').hidden = true;
-  $('#registerForm').hidden = false;
-});
-$('#cancelRegisterBtn')?.addEventListener('click', () => {
-  $('#loginForm').hidden = false;
-  $('#registerForm').hidden = true;
-});
-$('#registerForm')?.addEventListener('submit', async e => {
-  e.preventDefault();
-  $('#regError').textContent = '';
-  try {
-    const r = await api('/auth/register', {
-      method: 'POST',
-      body: { username: $('#regUsername').value.trim(), password: $('#regPassword').value }
-    });
-    state.csrf = r.csrfToken;
-    state.user = r.user;
-    await onAuthenticated();
-    toast(`Account ready! Welcome, ${r.user.username}! ♥`);
-  } catch (ex) { $('#regError').textContent = ex.message; }
 });
 
 // Lock
@@ -1027,6 +989,56 @@ async function uploadPhotos(files, chapterId) {
 // 13. PHOTO INTERACTIONS
 // ----------------------------------------------------------------
 
+// ---- DELETE CONFIRMATION MODAL ----
+// Replaces browser confirm() with a styled password-gated modal
+function confirmDelete(message, onConfirm) {
+  const overlay = $('#deleteConfirmOverlay');
+  const msgEl   = $('#deleteConfirmMsg');
+  const pwdEl   = $('#deleteConfirmPassword');
+  const errEl   = $('#deleteConfirmError');
+  const btn     = $('#deleteConfirmBtn');
+
+  if (!overlay || !btn) {
+    // Fallback: plain confirm (should never happen in production)
+    if (window.confirm(message)) onConfirm();
+    return;
+  }
+
+  msgEl.textContent = message;
+  pwdEl.value       = '';
+  errEl.textContent = '';
+  openModal('deleteConfirmOverlay');
+
+  // Clone-replace button to remove old listeners
+  const freshBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(freshBtn, freshBtn); // no-op guard
+  const targetBtn = $('#deleteConfirmBtn');
+
+  function handler() {
+    const typed = pwdEl.value;
+    if (typed !== 'hamiya@2410') {
+      errEl.textContent = 'Incorrect password. Please try again.';
+      pwdEl.value = '';
+      pwdEl.focus();
+      return;
+    }
+    closeModal('deleteConfirmOverlay');
+    targetBtn.removeEventListener('click', handler);
+    onConfirm();
+  }
+  targetBtn.addEventListener('click', handler);
+
+  // Also allow Enter key inside password input
+  function enterHandler(ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); handler(); }
+  }
+  pwdEl.addEventListener('keydown', enterHandler);
+  overlay.addEventListener('modal-close', () => {
+    targetBtn.removeEventListener('click', handler);
+    pwdEl.removeEventListener('keydown', enterHandler);
+  }, { once: true });
+}
+
 // Delegated click on page-right content
 document.addEventListener('click', async e => {
 
@@ -1073,14 +1085,15 @@ document.addEventListener('click', async e => {
   const delBtn = e.target.closest('[data-del-photo]');
   if (delBtn && !delBtn.closest('.lightbox')) {
     e.stopPropagation();
-    if (!confirm('Remove this photograph from the album and Cloudinary?')) return;
-    try {
-      await api(`/photos/${delBtn.dataset.delPhoto}`, { method: 'DELETE' });
-      toast('Photograph removed.');
-      state.photos = await api(`/photos/chapter/${state.chapters[state.currentIdx]._id}`);
-      renderRightPage(state.chapters[state.currentIdx]);
-      await loadChapters();
-    } catch (err) { toast(err.message); }
+    confirmDelete('This will permanently remove this photograph from the album and Cloudinary. This cannot be undone.', async () => {
+      try {
+        await api(`/photos/${delBtn.dataset.delPhoto}`, { method: 'DELETE' });
+        toast('Photograph removed.');
+        state.photos = await api(`/photos/chapter/${state.chapters[state.currentIdx]._id}`);
+        renderRightPage(state.chapters[state.currentIdx]);
+        await loadChapters();
+      } catch (err) { toast(err.message); }
+    });
     return;
   }
 
@@ -1102,14 +1115,15 @@ document.addEventListener('click', async e => {
   // ---- DELETE ENTRY ----
   const delEntry = e.target.closest('[data-del-entry]');
   if (delEntry) {
-    if (!confirm('Delete this memory note?')) return;
-    try {
-      await api(`/entries/${delEntry.dataset.delEntry}`, { method: 'DELETE' });
-      state.entries = state.entries.filter(en => en._id !== delEntry.dataset.delEntry);
-      renderLeftPage(state.chapters[state.currentIdx]);
-      renderRightPage(state.chapters[state.currentIdx]);
-      toast('Note deleted.');
-    } catch (err) { toast(err.message); }
+    confirmDelete('This will permanently delete this memory note. It cannot be recovered.', async () => {
+      try {
+        await api(`/entries/${delEntry.dataset.delEntry}`, { method: 'DELETE' });
+        state.entries = state.entries.filter(en => en._id !== delEntry.dataset.delEntry);
+        renderLeftPage(state.chapters[state.currentIdx]);
+        renderRightPage(state.chapters[state.currentIdx]);
+        toast('Note deleted.');
+      } catch (err) { toast(err.message); }
+    });
     return;
   }
 
@@ -1123,18 +1137,19 @@ document.addEventListener('click', async e => {
   // ---- DELETE CHAPTER ----
   const delCh = e.target.closest('[data-del-chapter]');
   if (delCh) {
-    if (!confirm('Delete this entire chapter and all its photos and notes? This cannot be undone.')) return;
-    try {
-      await api(`/chapters/${delCh.dataset.delChapter}`, { method: 'DELETE' });
-      await loadChapters();
-      toast('Chapter removed.');
-      if (state.chapters.length > 0) {
-        const newIdx = Math.min(state.currentIdx, state.chapters.length - 1);
-        await renderChapterSpread(Math.max(0, newIdx), 'prev');
-      } else {
-        renderEmptySpread();
-      }
-    } catch (err) { toast(err.message); }
+    confirmDelete('This will permanently delete this entire chapter and ALL its photographs and notes. This cannot be undone.', async () => {
+      try {
+        await api(`/chapters/${delCh.dataset.delChapter}`, { method: 'DELETE' });
+        await loadChapters();
+        toast('Chapter removed.');
+        if (state.chapters.length > 0) {
+          const newIdx = Math.min(state.currentIdx, state.chapters.length - 1);
+          await renderChapterSpread(Math.max(0, newIdx), 'prev');
+        } else {
+          renderEmptySpread();
+        }
+      } catch (err) { toast(err.message); }
+    });
     return;
   }
 
@@ -1244,15 +1259,16 @@ $('#lightboxCapEdit')?.addEventListener('click', () => {
 $('#lightboxDelete')?.addEventListener('click', async () => {
   const p = state.lightList[state.lightIdx];
   if (!p) return;
-  if (!confirm('Delete this photograph permanently from Cloudinary and your album?')) return;
-  try {
-    await api(`/photos/${p._id}`, { method: 'DELETE' });
-    closeLightbox();
-    toast('Photograph removed.');
-    state.photos = await api(`/photos/chapter/${state.chapters[state.currentIdx]._id}`);
-    renderRightPage(state.chapters[state.currentIdx]);
-    await loadChapters();
-  } catch (err) { toast(err.message); }
+  confirmDelete('This will permanently delete this photograph from Cloudinary and your album. It cannot be recovered.', async () => {
+    try {
+      await api(`/photos/${p._id}`, { method: 'DELETE' });
+      closeLightbox();
+      toast('Photograph removed.');
+      state.photos = await api(`/photos/chapter/${state.chapters[state.currentIdx]._id}`);
+      renderRightPage(state.chapters[state.currentIdx]);
+      await loadChapters();
+    } catch (err) { toast(err.message); }
+  });
 });
 
 document.addEventListener('keydown', e => {
@@ -1463,13 +1479,14 @@ function closeModal(id) {
   if (!el) return;
   el.classList.remove('is-open');
   el.setAttribute('aria-hidden', 'true');
+  el.dispatchEvent(new CustomEvent('modal-close'));
 }
 
 // All [data-modal-close] clicks handled by delegated listener above
 // Escape key closes any open modal
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  ['chapterModalOverlay', 'entryModalOverlay', 'captionModalOverlay', 'backupModalOverlay'].forEach(id => {
+  ['chapterModalOverlay', 'entryModalOverlay', 'captionModalOverlay', 'backupModalOverlay', 'deleteConfirmOverlay'].forEach(id => {
     if ($(`#${id}`)?.classList.contains('is-open')) closeModal(id);
   });
   if ($('#indexPanel')?.classList.contains('is-open'))  closeIndex();
@@ -1523,34 +1540,41 @@ $('#runRestoreBtn')?.addEventListener('click', async () => {
   }
 
   const isReplace = $('#restoreReplaceMode')?.checked;
-  if (isReplace && !confirm('WARNING: Replace mode will overwrite your current chapters with the backup. Proceed?')) {
-    return;
+
+  async function doRestore(replaceMode) {
+    try {
+      toast('Restoring memories…');
+      const text = await file.text();
+      const backupData = JSON.parse(text);
+      if (!backupData.data || !Array.isArray(backupData.data.chapters)) {
+        throw new Error('Invalid backup file format.');
+      }
+
+      const res = await api('/backup/restore', {
+        method: 'POST',
+        body: { ...backupData, mode: replaceMode ? 'replace' : 'merge' }
+      });
+
+      closeModal('backupModalOverlay');
+      fileInput.value = '';
+      toast(`✓ ${res.message || 'Memories restored!'} ♥`);
+      await loadChapters();
+      if (state.chapters.length > 0) {
+        await renderChapterSpread(0, 'next');
+      } else {
+        renderEmptySpread();
+      }
+    } catch (err) {
+      toast(`Restore error: ${err.message}`);
+    }
   }
 
-  try {
-    toast('Restoring memories…');
-    const text = await file.text();
-    const backupData = JSON.parse(text);
-    if (!backupData.data || !Array.isArray(backupData.data.chapters)) {
-      throw new Error('Invalid backup file format.');
-    }
-
-    const res = await api('/backup/restore', {
-      method: 'POST',
-      body: { ...backupData, mode: isReplace ? 'replace' : 'merge' }
+  if (isReplace) {
+    confirmDelete('WARNING: Replace mode will overwrite ALL your current chapters with the backup. This cannot be undone. Only proceed if you are sure.', () => {
+      doRestore(true);
     });
-
-    closeModal('backupModalOverlay');
-    fileInput.value = '';
-    toast(`✓ ${res.message || 'Memories restored!'} ♥`);
-    await loadChapters();
-    if (state.chapters.length > 0) {
-      await renderChapterSpread(0, 'next');
-    } else {
-      renderEmptySpread();
-    }
-  } catch (err) {
-    toast(`Restore error: ${err.message}`);
+  } else {
+    await doRestore(false);
   }
 });
 
