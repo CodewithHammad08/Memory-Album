@@ -10,15 +10,20 @@ router.get('/chapter/:chapterId', asyncHandler(async (req, res) => {
 }));
 
 router.post('/chapter/:chapterId', csrf, asyncHandler(async (req, res) => {
-  const entry = await Entry.create({
-    ...req.body,
-    chapterId: req.params.chapterId
-  });
+  const data = { ...req.body, chapterId: req.params.chapterId };
+  if (!data.encryptedContent && data.content) {
+    data.encryptedContent = data.content;
+  }
+  const entry = await Entry.create(data);
   res.status(201).json(entry);
 }));
 
 router.put('/:id', csrf, asyncHandler(async (req, res) => {
-  const e = await Entry.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  const data = { ...req.body };
+  if (!data.encryptedContent && data.content) {
+    data.encryptedContent = data.content;
+  }
+  const e = await Entry.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true });
   if (!e) return res.status(404).json({ error: 'Entry not found.' });
   res.json(e);
 }));
