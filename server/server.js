@@ -51,7 +51,8 @@ async function doBootstrap() {
       .map(x => x.trim().toLowerCase())
       .filter(Boolean);
 
-    const setupPass = process.env.SETUP_PASSWORD || 'hamiya@2410';
+    const setupPass = process.env.SETUP_PASSWORD;
+    if (!setupPass) return;
     const passwordHash = await bcrypt.hash(setupPass, 12);
 
     for (const username of names) {

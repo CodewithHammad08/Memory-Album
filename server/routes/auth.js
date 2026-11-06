@@ -58,6 +58,21 @@ router.post('/login', loginLimit, asyncHandler(async (req, res) => {
   });
 }));
 
+router.post('/verify-password', asyncHandler(async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+  const { password } = req.body || {};
+  if (!password || typeof password !== 'string') {
+    return res.status(400).json({ error: 'Password is required.' });
+  }
+  const user = await User.findById(req.session.userId).select('+passwordHash');
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    return res.status(401).json({ error: 'Incorrect password.' });
+  }
+  res.json({ ok: true });
+}));
+
 // Quick-unlock disabled in production
 router.post('/quick-unlock', (req, res) => {
   res.status(403).json({ error: 'Quick unlock is disabled.' });

@@ -1014,17 +1014,23 @@ function confirmDelete(message, onConfirm) {
   btn.parentNode.replaceChild(freshBtn, freshBtn); // no-op guard
   const targetBtn = $('#deleteConfirmBtn');
 
-  function handler() {
+  async function handler() {
     const typed = pwdEl.value;
-    if (typed !== 'hamiya@2410') {
+    if (!typed) {
+      errEl.textContent = 'Please enter your password.';
+      return;
+    }
+    errEl.textContent = 'Verifying…';
+    try {
+      await api('/auth/verify-password', { method: 'POST', body: { password: typed } });
+      closeModal('deleteConfirmOverlay');
+      targetBtn.removeEventListener('click', handler);
+      onConfirm();
+    } catch {
       errEl.textContent = 'Incorrect password. Please try again.';
       pwdEl.value = '';
       pwdEl.focus();
-      return;
     }
-    closeModal('deleteConfirmOverlay');
-    targetBtn.removeEventListener('click', handler);
-    onConfirm();
   }
   targetBtn.addEventListener('click', handler);
 
