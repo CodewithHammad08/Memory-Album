@@ -114,6 +114,8 @@ router.post('/restore', requireAuth, csrf, async (req, res) => {
         caption: ph.caption || '',
         frameSize: ['small', 'standard', 'large'].includes(ph.frameSize) ? ph.frameSize : 'standard',
         customWidth: ph.customWidth || 0,
+        customHeight: ph.customHeight || 0,
+        imgHeight: ph.imgHeight || 0,
         rotation: ph.rotation || 0,
         cropZoom: ph.cropZoom || 1,
         cropX: ph.cropX || 0,

@@ -12,6 +12,8 @@ module.exports = model('Photo', new Schema({
   // Lets each memory have its own place in the scrapbook composition.
   frameSize: { type: String, enum: ['small', 'standard', 'large'], default: 'standard' },
   customWidth: { type: Number, default: 0 },
+  customHeight: { type: Number, default: 0 },
+  imgHeight: { type: Number, default: 0 },
   rotation: { type: Number, default: 0 },
   cropZoom: { type: Number, default: 1 },
   cropX: { type: Number, default: 0 },

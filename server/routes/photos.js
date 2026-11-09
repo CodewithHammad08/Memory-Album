@@ -208,6 +208,8 @@ router.put('/:id', csrf, asyncHandler(async (req, res) => {
   if (['small', 'standard', 'large'].includes(req.body.frameSize)) updates.frameSize = req.body.frameSize;
   if (typeof req.body.displayOrder === 'number') updates.displayOrder = req.body.displayOrder;
   if (typeof req.body.customWidth === 'number') updates.customWidth = Math.max(0, Math.min(1200, req.body.customWidth));
+  if (typeof req.body.customHeight === 'number') updates.customHeight = Math.max(0, Math.min(1500, req.body.customHeight));
+  if (typeof req.body.imgHeight === 'number') updates.imgHeight = Math.max(0, Math.min(1200, req.body.imgHeight));
   if (typeof req.body.rotation === 'number') updates.rotation = req.body.rotation;
   if (typeof req.body.cropZoom === 'number') updates.cropZoom = Math.max(0.5, Math.min(5, req.body.cropZoom));
   if (typeof req.body.cropX === 'number') updates.cropX = req.body.cropX;

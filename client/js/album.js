@@ -515,6 +515,8 @@ function buildPolaroid(photo, idx) {
   const isFav = photo.isFavourite;
   const frameSize = ['small', 'standard', 'large'].includes(photo.frameSize) ? photo.frameSize : 'standard';
   const customWidth = photo.customWidth || 0;
+  const customHeight = photo.customHeight || 0;
+  const imgHeight = photo.imgHeight || 0;
   const rotation = photo.rotation || 0;
   const cropZoom = photo.cropZoom || 1;
   const cropX = photo.cropX || 0;
@@ -528,6 +530,8 @@ function buildPolaroid(photo, idx) {
 
   const inlineStyles = [
     customWidth > 0 ? `width:${customWidth}px; max-width:96%;` : '',
+    customHeight > 0 ? `--polaroid-h:${customHeight}px; height:${customHeight}px;` : '',
+    imgHeight > 0 ? `--img-h:${imgHeight}px;` : '',
     `--rot:${rotation}deg;`,
     `--crop-zoom:${cropZoom};`,
     `--crop-x:${cropX}px;`,
@@ -1325,7 +1329,7 @@ async function cyclePhotoSize(photoId) {
   const current = sizes.includes(photo.frameSize) ? photo.frameSize : 'standard';
   const next = sizes[(sizes.indexOf(current) + 1) % sizes.length];
   try {
-    const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: { frameSize: next, customWidth: 0 } });
+    const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: { frameSize: next, customWidth: 0, customHeight: 0, imgHeight: 0 } });
     Object.assign(photo, updated);
     if (state.chapters[state.currentIdx]) {
       const chId = state.chapters[state.currentIdx]._id;
@@ -1463,6 +1467,11 @@ function updateCropPreview() {
   const frameSize = $('#captionFrameSize')?.value || 'standard';
   const customWidthInput = $('#captionCustomWidth');
   const customWidth = parseInt(customWidthInput?.value || '240', 10);
+  const customHeightInput = $('#captionCustomHeight');
+  const customHeight = parseInt(customHeightInput?.value || '0', 10);
+  const imgHeightInput = $('#captionImgHeight');
+  const imgHeight = parseInt(imgHeightInput?.value || '0', 10);
+
   const rot = parseInt($('#captionRotation')?.value || '0', 10);
   const zoom = parseFloat($('#captionCropZoom')?.value || '1');
   const cropX = parseInt($('#captionCropX')?.value || '0', 10);
@@ -1475,6 +1484,16 @@ function updateCropPreview() {
   }
   const widthPxBadge = $('#customWidthPx');
   if (widthPxBadge) widthPxBadge.textContent = `${customWidth}px`;
+
+  const heightValBadge = $('#captionCustomHeightVal');
+  if (heightValBadge) {
+    heightValBadge.textContent = customHeight > 0 ? `${customHeight}px` : 'Auto';
+  }
+
+  const imgHeightValBadge = $('#captionImgHeightVal');
+  if (imgHeightValBadge) {
+    imgHeightValBadge.textContent = imgHeight > 0 ? `${imgHeight}px` : 'Auto';
+  }
 
   const rotVal = $('#captionRotationVal');
   if (rotVal) rotVal.textContent = `${rot}°`;
@@ -1496,6 +1515,21 @@ function updateCropPreview() {
     else if (frameSize === 'large') previewWidth = 240;
     else if (frameSize === 'custom') previewWidth = Math.min(260, Math.max(140, Math.round(customWidth * 0.75)));
     previewPolaroid.style.width = `${previewWidth}px`;
+
+    if (customHeight > 0) {
+      previewPolaroid.style.height = `${Math.min(320, Math.max(150, Math.round(customHeight * 0.75)))}px`;
+    } else {
+      previewPolaroid.style.height = 'auto';
+    }
+  }
+
+  // Update preview media window height
+  if (wrap) {
+    if (imgHeight > 0) {
+      wrap.style.height = `${Math.min(260, Math.max(80, Math.round(imgHeight * 0.75)))}px`;
+    } else {
+      wrap.style.height = '180px';
+    }
   }
 
   const mediaEl = wrap.querySelector('img, video');
@@ -1511,15 +1545,19 @@ function openCaptionModal(photoId) {
   $('#captionPhotoId').value   = photoId;
   $('#captionText').value      = p.caption || '';
 
-  const frameSizeChoice = p.customWidth > 0 ? 'custom' : (['small', 'standard', 'large'].includes(p.frameSize) ? p.frameSize : 'standard');
+  const isCustom = (p.customWidth > 0 || p.customHeight > 0 || p.imgHeight > 0);
+  const frameSizeChoice = isCustom ? 'custom' : (['small', 'standard', 'large'].includes(p.frameSize) ? p.frameSize : 'standard');
   $('#captionFrameSize').value = frameSizeChoice;
 
   const defaultWidth = p.customWidth || (p.frameSize === 'small' ? 180 : (p.frameSize === 'large' ? 320 : 240));
-  $('#captionCustomWidth').value = defaultWidth;
-  $('#captionRotation').value    = p.rotation || 0;
-  $('#captionCropZoom').value    = p.cropZoom || 1;
-  $('#captionCropX').value       = p.cropX || 0;
-  $('#captionCropY').value       = p.cropY || 0;
+  $('#captionCustomWidth').value  = defaultWidth;
+  $('#captionCustomHeight').value = p.customHeight || 0;
+  $('#captionImgHeight').value    = p.imgHeight || 0;
+
+  $('#captionRotation').value     = p.rotation || 0;
+  $('#captionCropZoom').value     = p.cropZoom || 1;
+  $('#captionCropX').value        = p.cropX || 0;
+  $('#captionCropY').value        = p.cropY || 0;
 
   // Set up live preview media in modal
   const wrap = $('#cropPreviewWrap');
@@ -1546,10 +1584,51 @@ $('#captionFrameSize')?.addEventListener('change', e => {
   if (sz === 'small') slider.value = 180;
   else if (sz === 'standard') slider.value = 240;
   else if (sz === 'large') slider.value = 320;
+  if (sz !== 'custom') {
+    $('#captionCustomHeight').value = 0;
+    $('#captionImgHeight').value = 0;
+  }
   updateCropPreview();
 });
 
 $('#captionCustomWidth')?.addEventListener('input', () => {
+  $('#captionFrameSize').value = 'custom';
+  updateCropPreview();
+});
+
+$('#captionCustomHeight')?.addEventListener('input', () => {
+  $('#captionFrameSize').value = 'custom';
+  updateCropPreview();
+});
+
+$('#captionImgHeight')?.addEventListener('input', () => {
+  $('#captionFrameSize').value = 'custom';
+  updateCropPreview();
+});
+
+$('#aspectAutoBtn')?.addEventListener('click', () => {
+  $('#captionCustomHeight').value = 0;
+  $('#captionImgHeight').value = 0;
+  updateCropPreview();
+});
+
+$('#aspectSquareBtn')?.addEventListener('click', () => {
+  const curW = parseInt($('#captionCustomWidth')?.value || '240', 10);
+  $('#captionImgHeight').value = curW;
+  $('#captionFrameSize').value = 'custom';
+  updateCropPreview();
+});
+
+$('#aspect43Btn')?.addEventListener('click', () => {
+  const curW = parseInt($('#captionCustomWidth')?.value || '240', 10);
+  $('#captionImgHeight').value = Math.round(curW * 0.75);
+  $('#captionFrameSize').value = 'custom';
+  updateCropPreview();
+});
+
+$('#aspect169Btn')?.addEventListener('click', () => {
+  const curW = parseInt($('#captionCustomWidth')?.value || '240', 10);
+  $('#captionImgHeight').value = Math.round(curW * 0.5625);
   $('#captionFrameSize').value = 'custom';
   updateCropPreview();
 });
@@ -1594,6 +1673,8 @@ $('#captionForm')?.addEventListener('submit', async e => {
   const caption = $('#captionText').value.trim();
   const frameSizeChoice = $('#captionFrameSize').value;
   const customWidth = frameSizeChoice === 'custom' ? parseInt($('#captionCustomWidth').value, 10) : 0;
+  const customHeight = parseInt($('#captionCustomHeight').value || '0', 10);
+  const imgHeight = parseInt($('#captionImgHeight').value || '0', 10);
   const frameSize = ['small', 'standard', 'large'].includes(frameSizeChoice) ? frameSizeChoice : 'standard';
   const rotation = parseInt($('#captionRotation').value || '0', 10);
   const cropZoom = parseFloat($('#captionCropZoom').value || '1');
@@ -1601,7 +1682,7 @@ $('#captionForm')?.addEventListener('submit', async e => {
   const cropY = parseInt($('#captionCropY').value || '0', 10);
 
   try {
-    const payload = { caption, frameSize, customWidth, rotation, cropZoom, cropX, cropY };
+    const payload = { caption, frameSize, customWidth, customHeight, imgHeight, rotation, cropZoom, cropX, cropY };
     const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: payload });
     // Update local state and memory cache
     const p = state.photos.find(ph => ph._id === photoId);

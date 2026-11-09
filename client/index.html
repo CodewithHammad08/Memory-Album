@@ -477,24 +477,52 @@
             <input type="text" id="captionText" placeholder="A sweet word about this memory…" maxlength="300">
           </div>
 
-          <!-- Polaroid Sizing -->
+          <!-- Polaroid Sizing & Dimensions -->
           <div class="form-group customizer-group">
             <div class="customizer-label-row">
-              <label for="captionFrameSize">Polaroid Size</label>
+              <label for="captionFrameSize">Polaroid Sizing &amp; Dimensions</label>
               <span class="customizer-badge" id="captionCustomWidthVal">Standard</span>
             </div>
             <select id="captionFrameSize">
               <option value="small">Small — delicate keepsake</option>
               <option value="standard">Standard — classic polaroid</option>
               <option value="large">Large — dramatic moment</option>
-              <option value="custom">Custom Width…</option>
+              <option value="custom">Custom Dimensions…</option>
             </select>
-            <div class="slider-row" id="customWidthSliderRow" style="margin-top:8px;">
+
+            <!-- Width slider -->
+            <div class="slider-row" style="margin-top:10px;">
               <div class="slider-meta">
-                <span>Exact Width:</span>
+                <span>Polaroid Width:</span>
                 <span id="customWidthPx">240px</span>
               </div>
               <input type="range" id="captionCustomWidth" min="120" max="600" step="5" value="240">
+            </div>
+
+            <!-- Polaroid Total Height slider -->
+            <div class="slider-row" style="margin-top:10px;">
+              <div class="slider-meta">
+                <span>Polaroid Total Height:</span>
+                <span id="captionCustomHeightVal">Auto</span>
+              </div>
+              <input type="range" id="captionCustomHeight" min="0" max="750" step="5" value="0">
+            </div>
+
+            <!-- Image Media Window Height slider -->
+            <div class="slider-row" style="margin-top:10px;">
+              <div class="slider-meta">
+                <span>Image / Photo Height:</span>
+                <span id="captionImgHeightVal">Auto</span>
+              </div>
+              <input type="range" id="captionImgHeight" min="0" max="600" step="5" value="0">
+            </div>
+
+            <!-- Quick Aspect Ratio Presets -->
+            <div class="rotate-quick-row" style="margin-top:8px;">
+              <button type="button" class="btn-tool" id="aspectAutoBtn" title="Reset heights to default layout">Auto</button>
+              <button type="button" class="btn-tool" id="aspectSquareBtn" title="Square 1:1 ratio">1:1 Square</button>
+              <button type="button" class="btn-tool" id="aspect43Btn" title="Classic 4:3 photo ratio">4:3 Classic</button>
+              <button type="button" class="btn-tool" id="aspect169Btn" title="Widescreen 16:9 ratio">16:9 Wide</button>
             </div>
           </div>
 

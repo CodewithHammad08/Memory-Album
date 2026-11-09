@@ -1739,6 +1739,25 @@ img { max-width: 100%; display: block; }
   background: #f8f4f0;
 }
 
+.polaroid[style*="--img-h"] .polaroid-img-wrap {
+  height: var(--img-h) !important;
+}
+
+.polaroid[style*="--polaroid-h"] {
+  height: var(--polaroid-h) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.polaroid[style*="--polaroid-h"] .polaroid-img-wrap {
+  flex: 1 1 auto;
+}
+
+.polaroid[style*="--polaroid-h"][style*="--img-h"] .polaroid-img-wrap {
+  flex: none;
+  height: var(--img-h) !important;
+}
+
 .polaroid img,
 .polaroid video {
   width: 100%;
