@@ -76,6 +76,8 @@ router.post('/upload', csrf, upload.array('photos', 30), asyncHandler(async (req
       type: 'upload'
     });
 
+    const basePage = req.body.pageNumber ? parseInt(req.body.pageNumber, 10) : (Math.floor(existingCount / 4) + 1);
+    const targetPage = basePage + Math.floor(i / 4);
     const photo = await Photo.create({
       chapterId: chapter._id,
       cloudinaryPublicId: uploadResult.public_id,
@@ -86,7 +88,8 @@ router.post('/upload', csrf, upload.array('photos', 30), asyncHandler(async (req
       secureUrl: uploadResult.secure_url || uploadResult.url,
       caption: (files.length === 1 && req.body.caption) ? req.body.caption.trim() : '',
       isFavourite: false,
-      displayOrder: existingCount + i
+      displayOrder: existingCount + i,
+      pageNumber: targetPage || 1
     });
 
     // Auto-set cover photo if chapter doesn't have one
@@ -140,6 +143,9 @@ router.post('/', csrf, asyncHandler(async (req, res) => {
   const existingCount = await Photo.countDocuments({ chapterId: body.chapterId });
   if (typeof body.displayOrder !== 'number') {
     body.displayOrder = existingCount;
+  }
+  if (!body.pageNumber) {
+    body.pageNumber = Math.floor(existingCount / 4) + 1;
   }
   const p = await Photo.create(body);
   const chapter = await Chapter.findById(p.chapterId);
@@ -211,6 +217,7 @@ router.put('/:id', csrf, asyncHandler(async (req, res) => {
   if (typeof req.body.customHeight === 'number') updates.customHeight = Math.max(0, Math.min(1500, req.body.customHeight));
   if (typeof req.body.imgHeight === 'number') updates.imgHeight = Math.max(0, Math.min(1200, req.body.imgHeight));
   if (['cover', 'contain'].includes(req.body.objectFit)) updates.objectFit = req.body.objectFit;
+  if (typeof req.body.pageNumber === 'number' && req.body.pageNumber >= 1) updates.pageNumber = Math.max(1, Math.min(100, Math.round(req.body.pageNumber)));
   if (typeof req.body.rotation === 'number') updates.rotation = req.body.rotation;
   if (typeof req.body.cropZoom === 'number') updates.cropZoom = Math.max(0.5, Math.min(5, req.body.cropZoom));
   if (typeof req.body.cropX === 'number') updates.cropX = req.body.cropX;

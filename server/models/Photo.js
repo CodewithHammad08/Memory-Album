@@ -20,5 +20,6 @@ module.exports = model('Photo', new Schema({
   cropX: { type: Number, default: 0 },
   cropY: { type: Number, default: 0 },
   isFavourite: { type: Boolean, default: false, index: true },
-  displayOrder: { type: Number, default: 0 }
+  displayOrder: { type: Number, default: 0 },
+  pageNumber: { type: Number, default: 1 }
 }, { timestamps: true }));

@@ -1699,6 +1699,95 @@ img { max-width: 100%; display: block; }
   overflow-y: auto;
 }
 
+/* ======================================================
+   SCRAPBOOK CHAPTER SUB-PAGE BAR
+   ====================================================== */
+.scrapbook-page-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 12px;
+  margin-top: 6px;
+  background: rgba(255, 251, 245, 0.85);
+  border: 1px dashed rgba(180, 95, 128, 0.28);
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(89, 55, 71, 0.05);
+  z-index: 10;
+}
+
+.scrapbook-page-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scrapbook-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(180, 95, 128, 0.22);
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.scrapbook-page-btn:hover:not(:disabled) {
+  background: var(--deep);
+  color: #ffffff;
+  border-color: var(--deep);
+}
+
+.scrapbook-page-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.scrapbook-page-label {
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  color: var(--deep);
+  text-transform: uppercase;
+}
+
+.scrapbook-add-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--deep);
+  background: #ffffff;
+  border: 1px solid rgba(180, 95, 128, 0.32);
+  padding: 4px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.scrapbook-add-page-btn:hover {
+  background: var(--deep);
+  color: #ffffff;
+  border-color: var(--deep);
+  transform: translateY(-1px);
+}
+
+.photo-upload-zone--newpage {
+  border: 2px dashed rgba(180, 95, 128, 0.45);
+  background: rgba(255, 252, 248, 0.9);
+  border-radius: 8px;
+  padding: 28px 18px;
+}
+
 /* Individual polaroid */
 .polaroid {
   --tilt: -1.4deg;

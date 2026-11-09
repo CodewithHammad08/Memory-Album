@@ -122,7 +122,8 @@ router.post('/restore', requireAuth, csrf, async (req, res) => {
         cropX: ph.cropX || 0,
         cropY: ph.cropY || 0,
         isFavourite: Boolean(ph.isFavourite),
-        displayOrder: ph.displayOrder || 0
+        displayOrder: ph.displayOrder || 0,
+        pageNumber: ph.pageNumber || 1
       });
       restoredPhotos++;
     }

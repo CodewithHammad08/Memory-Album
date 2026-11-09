@@ -287,26 +287,74 @@ function preloadAdjacentChapters(currentIdx) {
   }
 }
 
-function scrapbookItems() {
-  const textPages = state.entries.filter(en => ['before', 'between', 'after'].includes(en.pagePosition));
-  const before = textPages.filter(en => en.pagePosition === 'before').map(entry => ({ type: 'text', entry }));
-  const between = textPages.filter(en => en.pagePosition === 'between').map(entry => ({ type: 'text', entry }));
-  const after = textPages.filter(en => en.pagePosition === 'after').map(entry => ({ type: 'text', entry }));
-  const media = state.photos.map((photo, index) => ({ type: 'media', photo, index }));
+const PAGE_CAPACITY = 4; // Exactly max 4 images/items per scrapbook page
 
-  // Text pages are part of the same physical scrapbook sequence, so they
-  // occupy one of the six available places on a page.
-  return [
-    ...before,
-    ...(media.length ? [media[0]] : []),
-    ...between,
-    ...media.slice(1),
-    ...after
-  ];
+function getChapterPages() {
+  const allPhotos = state.photos || [];
+  const textPages = (state.entries || []).filter(en => ['before', 'between', 'after'].includes(en.pagePosition));
+
+  // Determine pages based on explicit pageNumber or sequential chunks of max 4
+  const photosByPage = new Map();
+  const unassigned = [];
+
+  allPhotos.forEach(p => {
+    const pg = p.pageNumber;
+    if (typeof pg === 'number' && pg >= 1) {
+      if (!photosByPage.has(pg)) photosByPage.set(pg, []);
+      const list = photosByPage.get(pg);
+      if (list.length < PAGE_CAPACITY) {
+        list.push(p);
+      } else {
+        unassigned.push(p);
+      }
+    } else {
+      unassigned.push(p);
+    }
+  });
+
+  // Assign any overflow or unassigned photos so every page has at most 4
+  let targetPg = 1;
+  unassigned.forEach(p => {
+    while ((photosByPage.get(targetPg) || []).length >= PAGE_CAPACITY) {
+      targetPg++;
+    }
+    if (!photosByPage.has(targetPg)) photosByPage.set(targetPg, []);
+    photosByPage.get(targetPg).push(p);
+  });
+
+  // Check extra blank pages requested by user via "+ New Page"
+  const currentChId = state.chapters[state.currentIdx]?._id;
+  const extraPages = (state.extraPages && currentChId && state.extraPages[currentChId]) || 0;
+  let maxPage = photosByPage.size > 0 ? Math.max(...photosByPage.keys()) : 1;
+  if (extraPages > maxPage) maxPage = extraPages;
+
+  const pages = [];
+  for (let i = 1; i <= maxPage; i++) {
+    const photosOnPage = photosByPage.get(i) || [];
+    const mediaItems = photosOnPage.map((photo, index) => ({ type: 'media', photo, index }));
+    if (i === 1) {
+      const before = textPages.filter(en => en.pagePosition === 'before').map(entry => ({ type: 'text', entry }));
+      const between = textPages.filter(en => en.pagePosition === 'between').map(entry => ({ type: 'text', entry }));
+      const after = textPages.filter(en => en.pagePosition === 'after').map(entry => ({ type: 'text', entry }));
+      pages.push([...before, ...(mediaItems.slice(0, 1)), ...between, ...(mediaItems.slice(1)), ...after].slice(0, PAGE_CAPACITY));
+    } else {
+      pages.push(mediaItems.slice(0, PAGE_CAPACITY));
+    }
+  }
+
+  return pages;
+}
+
+function scrapbookItems() {
+  const pages = getChapterPages();
+  const flat = [];
+  pages.forEach(p => flat.push(...p));
+  return flat;
 }
 
 function mediaPageCount() {
-  return Math.max(1, Math.ceil(scrapbookItems().length / 6));
+  const pages = getChapterPages();
+  return Math.max(1, pages.length);
 }
 
 // ----------------------------------------------------------------
@@ -449,26 +497,36 @@ async function decryptEntryContents() {
 }
 
 function renderRightPage(chapter) {
-  const idx    = state.currentIdx;
-  const allPhotos = state.photos;
-  const allItems = scrapbookItems();
-  const totalMediaPages = mediaPageCount();
+  const idx = state.currentIdx;
+  const chapterPages = getChapterPages();
+  const totalMediaPages = Math.max(1, chapterPages.length);
   state.mediaPage = Math.max(0, Math.min(state.mediaPage, totalMediaPages - 1));
-  const pageItems = allItems.slice(state.mediaPage * 6, state.mediaPage * 6 + 6);
+  const pageItems = chapterPages[state.mediaPage] || [];
   const photos = pageItems.filter(item => item.type === 'media').map(item => item.photo);
   const content = $('#pageRightContent');
+  const pageNumDisplay = state.mediaPage + 1;
 
-  if (!allItems.length) {
-    // Empty right page — upload zone
+  if (!pageItems.length) {
+    // Empty right page — upload zone (either initial empty chapter or new added page)
     content.innerHTML = `
-      <div class="photo-upload-zone" id="dropZone" data-chapter-id="${chapter._id}">
+      <div class="photo-upload-zone photo-upload-zone--newpage" id="dropZone" data-chapter-id="${chapter._id}" data-page-number="${pageNumDisplay}">
         <div class="upload-zone-icon">📷</div>
-        <div class="upload-zone-title">Memories belong here</div>
-        <div class="upload-zone-sub">Drag & drop or click to add photos and videos</div>
+        <div class="upload-zone-title">Page ${pageNumDisplay} — A Fresh Scrapbook Page</div>
+        <div class="upload-zone-sub">Drag &amp; drop or click to add up to 4 photos and videos to this page</div>
         <button class="upload-zone-btn" id="dropZoneBtn">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          Add Media
+          Add Media to Page ${pageNumDisplay}
         </button>
+        ${totalMediaPages > 1 ? `
+          <div class="scrapbook-page-bar" style="margin-top:16px;">
+            <div class="scrapbook-page-info">
+              <button class="scrapbook-page-btn" id="subPagePrev" ${state.mediaPage === 0 ? 'disabled' : ''} title="Previous page">‹</button>
+              <span class="scrapbook-page-label">Page ${state.mediaPage + 1} of ${totalMediaPages}</span>
+              <button class="scrapbook-page-btn" id="subPageNext" ${state.mediaPage >= totalMediaPages - 1 ? 'disabled' : ''} title="Next page">›</button>
+            </div>
+            <button class="scrapbook-add-page-btn" id="subPageAdd" title="Create another new page">+ New Page</button>
+          </div>
+        ` : ''}
         <div class="swipe-hint" aria-hidden="true">← swipe to go back</div>
       </div>
     `;
@@ -481,18 +539,49 @@ function renderRightPage(chapter) {
     content.innerHTML = `
       <div class="photo-composition layout-${layout}${photos.filter(p => p.resourceType === 'video').length === 2 ? ' layout-videos' : ''}" id="photoComposition">
         ${pageMarkup}
-        ${totalMediaPages > 1 ? `<div class="media-page-indicator">Scrapbook ${state.mediaPage + 1} of ${totalMediaPages}</div>` : ''}
+        <div class="scrapbook-page-bar">
+          <div class="scrapbook-page-info">
+            <button class="scrapbook-page-btn" id="subPagePrev" ${state.mediaPage === 0 ? 'disabled' : ''} title="Previous page in this chapter">‹</button>
+            <span class="scrapbook-page-label">Page ${state.mediaPage + 1} of ${totalMediaPages}</span>
+            <button class="scrapbook-page-btn" id="subPageNext" ${state.mediaPage >= totalMediaPages - 1 ? 'disabled' : ''} title="Next page in this chapter">›</button>
+          </div>
+          <button class="scrapbook-add-page-btn" id="subPageAdd" title="Add a new page for more photos (max 4 per page)">+ New Page</button>
+        </div>
       </div>
     `;
     attachDropZone(content, chapter._id);
     decryptEntryContents();
   }
 
-  $('#pageNumRight').textContent = String(idx * 2 + 2).padStart(2, '0');
+  // Bind sub-page controls
+  $('#subPagePrev')?.addEventListener('click', async e => {
+    e.stopPropagation();
+    if (state.mediaPage > 0) {
+      state.mediaPage--;
+      await animatePageTurn('prev');
+      renderRightPage(state.chapters[state.currentIdx]);
+      updateNav();
+    }
+  });
 
-  // Rendering the media last guarantees the phone view lands on the page
-  // that actually contains the photographs, even after an async upload.
-  if (state.isMobile && allItems.length) {
+  $('#subPageNext')?.addEventListener('click', async e => {
+    e.stopPropagation();
+    if (state.mediaPage < totalMediaPages - 1) {
+      state.mediaPage++;
+      await animatePageTurn('next');
+      renderRightPage(state.chapters[state.currentIdx]);
+      updateNav();
+    }
+  });
+
+  $('#subPageAdd')?.addEventListener('click', e => {
+    e.stopPropagation();
+    addNewChapterPage();
+  });
+
+  $('#pageNumRight').textContent = String((idx * 2 + 2) + state.mediaPage).padStart(2, '0');
+
+  if (state.isMobile && pageItems.length) {
     state.showingRight = true;
     $('#bookSpread')?.classList.add('show-right');
     $('#pageRight')?.classList.add('mobile-media-active');
@@ -500,13 +589,35 @@ function renderRightPage(chapter) {
   }
 }
 
+async function addNewChapterPage() {
+  if (state.currentIdx < 0 || !state.chapters[state.currentIdx]) {
+    toast('Please open a chapter first, then add a page.');
+    return;
+  }
+  const ch = state.chapters[state.currentIdx];
+  const currentTotal = mediaPageCount();
+  state.extraPages = state.extraPages || {};
+  state.extraPages[ch._id] = Math.max(currentTotal + 1, (state.extraPages[ch._id] || 0) + 1);
+  state.mediaPage = state.extraPages[ch._id] - 1;
+
+  await animatePageTurn('next');
+  renderRightPage(ch);
+  if (state.isMobile) {
+    state.showingRight = true;
+    $('#bookSpread')?.classList.add('show-right');
+    $('#pageRight')?.classList.add('mobile-media-active');
+  }
+  updateNav();
+  toast(`New blank page created! (Page ${state.mediaPage + 1}) Add up to 4 photos ♥`);
+}
+
+$('#navAddPage')?.addEventListener('click', addNewChapterPage);
+
 function getLayout(n) {
-  if (n === 0)             return '1';
-  if (n === 1)             return '1';
-  if (n === 2)             return '2';
-  if (n === 3)             return '3';
-  if (n === 4)             return '4';
-  return 'many';
+  if (n <= 1) return '1';
+  if (n === 2) return '2';
+  if (n === 3) return '3';
+  return '4';
 }
 
 function buildPolaroid(photo, idx) {
@@ -735,6 +846,7 @@ $('#navPrev')?.addEventListener('click', async () => {
   const idx = state.currentIdx;
   if (state.mediaPage > 0) {
     state.mediaPage--;
+    await animatePageTurn('prev');
     renderRightPage(state.chapters[idx]);
     updateNav();
     return;
@@ -769,6 +881,7 @@ $('#navNext')?.addEventListener('click', async () => {
 
   if (state.mediaPage < mediaPageCount() - 1) {
     state.mediaPage++;
+    await animatePageTurn('next');
     renderRightPage(state.chapters[idx]);
     updateNav();
     return;
@@ -1041,6 +1154,9 @@ async function uploadPhotos(files, chapterId) {
 
     if (sig && sig.signature && sig.apiKey && sig.cloudName) {
       // Direct-to-Cloudinary upload loop
+      let curPage = (state.mediaPage + 1) || 1;
+      let countOnCurPage = (state.photos || []).filter(p => (p.pageNumber || 1) === curPage).length;
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const isVideo = file.type.startsWith('video/');
@@ -1066,6 +1182,13 @@ async function uploadPhotos(files, chapterId) {
         }
         const cJson = await cRes.json();
 
+        if (countOnCurPage >= PAGE_CAPACITY) {
+          curPage++;
+          countOnCurPage = 0;
+        }
+        const filePageNumber = curPage;
+        countOnCurPage++;
+
         // Register in MongoDB
         await api('/photos', {
           method: 'POST',
@@ -1079,6 +1202,7 @@ async function uploadPhotos(files, chapterId) {
             secureUrl: cJson.secure_url || cJson.url,
             caption: '',
             frameSize: 'standard',
+            pageNumber: filePageNumber,
             isFavourite: false
           }
         });
@@ -1088,6 +1212,7 @@ async function uploadPhotos(files, chapterId) {
       // Fallback server stream upload
       const formData = new FormData();
       formData.append('chapterId', chapterId);
+      formData.append('pageNumber', (state.mediaPage + 1) || 1);
       files.forEach(f => formData.append('photos', f));
       const result = await api('/photos/upload', { method: 'POST', body: formData });
       uploadedCount = Array.isArray(result) ? result.length : files.length;
@@ -1098,7 +1223,8 @@ async function uploadPhotos(files, chapterId) {
     state.dataCache.set(chapterId, { photos: state.photos, entries: state.entries });
     await loadChapters();
     renderRightPage(chapter);
-    toast(`✓ ${uploadedCount} ${uploadedCount === 1 ? 'memory' : 'memories'} added to this page! ♥`);
+    updateNav();
+    toast(`✓ ${uploadedCount} ${uploadedCount === 1 ? 'memory' : 'memories'} added! ♥`);
   } catch (err) {
     renderRightPage(chapter);
     toast(`Upload failed: ${err.message}`);
@@ -1576,6 +1702,22 @@ function openCaptionModal(photoId) {
   $('#captionCropX').value        = p.cropX || 0;
   $('#captionCropY').value        = p.cropY || 0;
 
+  // Populate Page in Chapter selector
+  const pageSelect = $('#captionPageNumber');
+  if (pageSelect) {
+    const totalPages = mediaPageCount();
+    const curPhotoPage = p.pageNumber || (state.mediaPage + 1) || 1;
+    let opts = '';
+    const maxListed = Math.max(totalPages, curPhotoPage);
+    for (let i = 1; i <= maxListed; i++) {
+      opts += `<option value="${i}" ${curPhotoPage === i ? 'selected' : ''}>Page ${i}</option>`;
+    }
+    opts += `<option value="${maxListed + 1}">+ Move to New Page (Page ${maxListed + 1})</option>`;
+    pageSelect.innerHTML = opts;
+    const badge = $('#captionPageBadge');
+    if (badge) badge.textContent = `Page ${curPhotoPage}`;
+  }
+
   // Set up live preview media in modal
   const wrap = $('#cropPreviewWrap');
   if (wrap) {
@@ -1594,6 +1736,11 @@ function openCaptionModal(photoId) {
 
 // Bind customizer interactive events
 $('#captionText')?.addEventListener('input', updateCropPreview);
+
+$('#captionPageNumber')?.addEventListener('change', e => {
+  const badge = $('#captionPageBadge');
+  if (badge) badge.textContent = `Page ${e.target.value}`;
+});
 
 $('#captionFrameSize')?.addEventListener('change', e => {
   const sz = e.target.value;
@@ -1726,6 +1873,7 @@ $('#captionForm')?.addEventListener('submit', async e => {
   const customHeight = parseInt($('#captionCustomHeight').value || '0', 10);
   const imgHeight = parseInt($('#captionImgHeight').value || '0', 10);
   const objectFit = $('#captionObjectFit')?.value || 'cover';
+  const pageNumber = parseInt($('#captionPageNumber')?.value || '1', 10);
   const frameSize = ['small', 'standard', 'large'].includes(frameSizeChoice) ? frameSizeChoice : 'standard';
   const rotation = parseInt($('#captionRotation').value || '0', 10);
   const cropZoom = parseFloat($('#captionCropZoom').value || '1');
@@ -1733,7 +1881,7 @@ $('#captionForm')?.addEventListener('submit', async e => {
   const cropY = parseInt($('#captionCropY').value || '0', 10);
 
   try {
-    const payload = { caption, frameSize, customWidth, customHeight, imgHeight, objectFit, rotation, cropZoom, cropX, cropY };
+    const payload = { caption, frameSize, customWidth, customHeight, imgHeight, objectFit, pageNumber, rotation, cropZoom, cropX, cropY };
     const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: payload });
     // Update local state and memory cache
     const p = state.photos.find(ph => ph._id === photoId);
@@ -1746,7 +1894,11 @@ $('#captionForm')?.addEventListener('submit', async e => {
         const cp = cached.photos?.find(ph => ph._id === photoId);
         if (cp) Object.assign(cp, updated);
       }
+      if (pageNumber) {
+        state.mediaPage = Math.max(0, pageNumber - 1);
+      }
       renderRightPage(state.chapters[state.currentIdx]);
+      updateNav();
     }
     closeModal('captionModalOverlay');
     toast('Memory styling saved! ♥');
