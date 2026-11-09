@@ -14,6 +14,7 @@ module.exports = model('Photo', new Schema({
   customWidth: { type: Number, default: 0 },
   customHeight: { type: Number, default: 0 },
   imgHeight: { type: Number, default: 0 },
+  objectFit: { type: String, enum: ['cover', 'contain'], default: 'cover' },
   rotation: { type: Number, default: 0 },
   cropZoom: { type: Number, default: 1 },
   cropX: { type: Number, default: 0 },

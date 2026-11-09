@@ -521,17 +521,19 @@ function buildPolaroid(photo, idx) {
   const cropZoom = photo.cropZoom || 1;
   const cropX = photo.cropX || 0;
   const cropY = photo.cropY || 0;
+  const objectFit = photo.objectFit || 'cover';
 
   const frameSizeLabel = customWidth > 0 ? `${customWidth}px` : { small: 'Small', standard: 'Standard', large: 'Large' }[frameSize];
   const isVideo = photo.resourceType === 'video';
   const media = isVideo
-    ? `<video class="polaroid-video" autoplay muted loop playsinline preload="auto" aria-label="${esc(cap || 'Memory video')}"><source src="${esc(url)}"></video>`
-    : `<img src="${esc(optimizeCloudinaryUrl(url))}" alt="${esc(cap || 'Memory photograph')}" loading="lazy">`;
+    ? `<video class="polaroid-video" autoplay muted loop playsinline preload="auto" style="object-fit:${objectFit};" aria-label="${esc(cap || 'Memory video')}"><source src="${esc(url)}"></video>`
+    : `<img src="${esc(optimizeCloudinaryUrl(url))}" style="object-fit:${objectFit};" alt="${esc(cap || 'Memory photograph')}" loading="lazy">`;
 
   const inlineStyles = [
     customWidth > 0 ? `width:${customWidth}px; max-width:96%;` : '',
     customHeight > 0 ? `--polaroid-h:${customHeight}px; height:${customHeight}px;` : '',
     imgHeight > 0 ? `--img-h:${imgHeight}px;` : '',
+    `--obj-fit:${objectFit};`,
     `--rot:${rotation}deg;`,
     `--crop-zoom:${cropZoom};`,
     `--crop-x:${cropX}px;`,
@@ -539,7 +541,7 @@ function buildPolaroid(photo, idx) {
   ].filter(Boolean).join(' ');
 
   return `
-    <figure class="polaroid polaroid--${frameSize}${isVideo ? ' polaroid--video' : ''}" style="${inlineStyles}" data-photo-idx="${idx}" data-photo-id="${photo._id}">
+    <figure class="polaroid polaroid--${frameSize} polaroid--fit-${objectFit}${isVideo ? ' polaroid--video' : ''}" style="${inlineStyles}" data-photo-idx="${idx}" data-photo-id="${photo._id}">
       <div class="washi-tape" aria-hidden="true"></div>
       <span class="polaroid-size-tag" aria-hidden="true">${frameSizeLabel}</span>
       <div class="polaroid-img-wrap">
@@ -1329,7 +1331,7 @@ async function cyclePhotoSize(photoId) {
   const current = sizes.includes(photo.frameSize) ? photo.frameSize : 'standard';
   const next = sizes[(sizes.indexOf(current) + 1) % sizes.length];
   try {
-    const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: { frameSize: next, customWidth: 0, customHeight: 0, imgHeight: 0 } });
+    const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: { frameSize: next, customWidth: 0, customHeight: 0, imgHeight: 0, objectFit: 'cover' } });
     Object.assign(photo, updated);
     if (state.chapters[state.currentIdx]) {
       const chId = state.chapters[state.currentIdx]._id;
@@ -1471,6 +1473,7 @@ function updateCropPreview() {
   const customHeight = parseInt(customHeightInput?.value || '0', 10);
   const imgHeightInput = $('#captionImgHeight');
   const imgHeight = parseInt(imgHeightInput?.value || '0', 10);
+  const objectFit = $('#captionObjectFit')?.value || 'cover';
 
   const rot = parseInt($('#captionRotation')?.value || '0', 10);
   const zoom = parseFloat($('#captionCropZoom')?.value || '1');
@@ -1494,6 +1497,13 @@ function updateCropPreview() {
   if (imgHeightValBadge) {
     imgHeightValBadge.textContent = imgHeight > 0 ? `${imgHeight}px` : 'Auto';
   }
+
+  const fitBadge = $('#captionFitBadge');
+  if (fitBadge) {
+    fitBadge.textContent = objectFit === 'contain' ? 'Fit Full Photo (No Crop)' : 'Fill Frame (Cropped)';
+  }
+  $('#fitCoverBtn')?.classList.toggle('active', objectFit === 'cover');
+  $('#fitContainBtn')?.classList.toggle('active', objectFit === 'contain');
 
   const rotVal = $('#captionRotationVal');
   if (rotVal) rotVal.textContent = `${rot}°`;
@@ -1523,8 +1533,11 @@ function updateCropPreview() {
     }
   }
 
-  // Update preview media window height
+  // Update preview media window height & fit class
   if (wrap) {
+    wrap.classList.toggle('fit-contain', objectFit === 'contain');
+    wrap.classList.toggle('fit-cover', objectFit === 'cover');
+
     if (imgHeight > 0) {
       wrap.style.height = `${Math.min(260, Math.max(80, Math.round(imgHeight * 0.75)))}px`;
     } else {
@@ -1532,8 +1545,9 @@ function updateCropPreview() {
     }
   }
 
-  const mediaEl = wrap.querySelector('img, video');
+  const mediaEl = wrap?.querySelector('img, video');
   if (mediaEl) {
+    mediaEl.style.objectFit = objectFit;
     mediaEl.style.transform = `translate3d(${cropX}px, ${cropY}px, 0) scale(${zoom}) rotate(${rot}deg)`;
   }
 }
@@ -1554,6 +1568,9 @@ function openCaptionModal(photoId) {
   $('#captionCustomHeight').value = p.customHeight || 0;
   $('#captionImgHeight').value    = p.imgHeight || 0;
 
+  const objectFit = p.objectFit || 'cover';
+  if ($('#captionObjectFit')) $('#captionObjectFit').value = objectFit;
+
   $('#captionRotation').value     = p.rotation || 0;
   $('#captionCropZoom').value     = p.cropZoom || 1;
   $('#captionCropX').value        = p.cropX || 0;
@@ -1564,9 +1581,9 @@ function openCaptionModal(photoId) {
   if (wrap) {
     const url = p.secureUrl || p.url || '';
     if (p.resourceType === 'video') {
-      wrap.innerHTML = `<video autoplay muted loop playsinline preload="auto" src="${esc(url)}"></video>`;
+      wrap.innerHTML = `<video autoplay muted loop playsinline preload="auto" style="object-fit:${objectFit};" src="${esc(url)}"></video>`;
     } else {
-      wrap.innerHTML = `<img src="${esc(optimizeCloudinaryUrl(url))}" alt="Preview">`;
+      wrap.innerHTML = `<img src="${esc(optimizeCloudinaryUrl(url))}" style="object-fit:${objectFit};" alt="Preview">`;
     }
   }
 
@@ -1604,6 +1621,39 @@ $('#captionCustomHeight')?.addEventListener('input', () => {
 $('#captionImgHeight')?.addEventListener('input', () => {
   $('#captionFrameSize').value = 'custom';
   updateCropPreview();
+});
+
+$('#fitCoverBtn')?.addEventListener('click', () => {
+  if ($('#captionObjectFit')) $('#captionObjectFit').value = 'cover';
+  updateCropPreview();
+});
+
+$('#fitContainBtn')?.addEventListener('click', () => {
+  if ($('#captionObjectFit')) $('#captionObjectFit').value = 'contain';
+  updateCropPreview();
+});
+
+$('#matchAspectBtn')?.addEventListener('click', () => {
+  const wrap = $('#cropPreviewWrap');
+  const mediaEl = wrap?.querySelector('img, video');
+  if (!mediaEl) return;
+
+  const natW = mediaEl.naturalWidth || mediaEl.videoWidth || 0;
+  const natH = mediaEl.naturalHeight || mediaEl.videoHeight || 0;
+  const curW = parseInt($('#captionCustomWidth')?.value || '240', 10);
+
+  if (natW > 0 && natH > 0) {
+    const calculatedHeight = Math.round(curW * (natH / natW));
+    $('#captionImgHeight').value = Math.min(600, Math.max(100, calculatedHeight));
+    $('#captionFrameSize').value = 'custom';
+    $('#captionObjectFit').value = 'contain';
+    updateCropPreview();
+    toast('Polaroid matched to photo shape! ♥');
+  } else {
+    $('#captionImgHeight').value = Math.round(curW * 0.75);
+    $('#captionFrameSize').value = 'custom';
+    updateCropPreview();
+  }
 });
 
 $('#aspectAutoBtn')?.addEventListener('click', () => {
@@ -1675,6 +1725,7 @@ $('#captionForm')?.addEventListener('submit', async e => {
   const customWidth = frameSizeChoice === 'custom' ? parseInt($('#captionCustomWidth').value, 10) : 0;
   const customHeight = parseInt($('#captionCustomHeight').value || '0', 10);
   const imgHeight = parseInt($('#captionImgHeight').value || '0', 10);
+  const objectFit = $('#captionObjectFit')?.value || 'cover';
   const frameSize = ['small', 'standard', 'large'].includes(frameSizeChoice) ? frameSizeChoice : 'standard';
   const rotation = parseInt($('#captionRotation').value || '0', 10);
   const cropZoom = parseFloat($('#captionCropZoom').value || '1');
@@ -1682,7 +1733,7 @@ $('#captionForm')?.addEventListener('submit', async e => {
   const cropY = parseInt($('#captionCropY').value || '0', 10);
 
   try {
-    const payload = { caption, frameSize, customWidth, customHeight, imgHeight, rotation, cropZoom, cropX, cropY };
+    const payload = { caption, frameSize, customWidth, customHeight, imgHeight, objectFit, rotation, cropZoom, cropX, cropY };
     const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: payload });
     // Update local state and memory cache
     const p = state.photos.find(ph => ph._id === photoId);

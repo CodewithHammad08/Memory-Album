@@ -210,6 +210,7 @@ router.put('/:id', csrf, asyncHandler(async (req, res) => {
   if (typeof req.body.customWidth === 'number') updates.customWidth = Math.max(0, Math.min(1200, req.body.customWidth));
   if (typeof req.body.customHeight === 'number') updates.customHeight = Math.max(0, Math.min(1500, req.body.customHeight));
   if (typeof req.body.imgHeight === 'number') updates.imgHeight = Math.max(0, Math.min(1200, req.body.imgHeight));
+  if (['cover', 'contain'].includes(req.body.objectFit)) updates.objectFit = req.body.objectFit;
   if (typeof req.body.rotation === 'number') updates.rotation = req.body.rotation;
   if (typeof req.body.cropZoom === 'number') updates.cropZoom = Math.max(0.5, Math.min(5, req.body.cropZoom));
   if (typeof req.body.cropX === 'number') updates.cropX = req.body.cropX;

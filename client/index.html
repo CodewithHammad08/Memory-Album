@@ -526,6 +526,24 @@
             </div>
           </div>
 
+          <!-- Photo Fit & Framing Mode -->
+          <div class="form-group customizer-group">
+            <div class="customizer-label-row">
+              <label>Photo Fit on Polaroid</label>
+              <span class="customizer-badge" id="captionFitBadge">Fill Frame</span>
+            </div>
+            <input type="hidden" id="captionObjectFit" value="cover">
+            <div class="rotate-quick-row">
+              <button type="button" class="btn-tool active" id="fitCoverBtn" title="Fill entire polaroid box (crops edges if needed)">🔲 Fill Frame</button>
+              <button type="button" class="btn-tool" id="fitContainBtn" title="Show entire photo without cropping anything">🖼️ Fit Full Photo (No Crop)</button>
+            </div>
+            <div style="margin-top:8px;">
+              <button type="button" class="btn-tool" id="matchAspectBtn" style="width:100%; font-weight:600; background:rgba(180,95,128,0.1); border-color:rgba(180,95,128,0.3); color:var(--deep);" title="Automatically adjust polaroid height to fit the original photo shape perfectly">
+                ✨ Auto-Match Polaroid to Photo Shape
+              </button>
+            </div>
+          </div>
+
           <!-- Rotation Controls -->
           <div class="form-group customizer-group">
             <div class="customizer-label-row">

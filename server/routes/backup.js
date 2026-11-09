@@ -116,6 +116,7 @@ router.post('/restore', requireAuth, csrf, async (req, res) => {
         customWidth: ph.customWidth || 0,
         customHeight: ph.customHeight || 0,
         imgHeight: ph.imgHeight || 0,
+        objectFit: ['cover', 'contain'].includes(ph.objectFit) ? ph.objectFit : 'cover',
         rotation: ph.rotation || 0,
         cropZoom: ph.cropZoom || 1,
         cropX: ph.cropX || 0,
