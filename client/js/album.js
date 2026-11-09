@@ -551,6 +551,16 @@ function renderRightPage(chapter) {
     `;
     attachDropZone(content, chapter._id);
     decryptEntryContents();
+
+    // Adapt polaroid shape dynamically to each photograph's natural aspect ratio
+    content.querySelectorAll('.polaroid img, .polaroid video').forEach(mediaEl => {
+      if (mediaEl.complete || mediaEl.readyState >= 1) {
+        updatePolaroidAspect(mediaEl);
+      } else {
+        mediaEl.addEventListener('load', () => updatePolaroidAspect(mediaEl), { once: true });
+        mediaEl.addEventListener('loadedmetadata', () => updatePolaroidAspect(mediaEl), { once: true });
+      }
+    });
   }
 
   // Bind sub-page controls
@@ -620,6 +630,38 @@ function getLayout(n) {
   return '4';
 }
 
+function updatePolaroidAspect(mediaEl) {
+  if (!mediaEl) return;
+  const polaroid = mediaEl.closest('.polaroid');
+  if (!polaroid) return;
+
+  // If user set an explicit custom height, don't override it
+  if (polaroid.style.getPropertyValue('--img-h') || polaroid.style.getPropertyValue('--polaroid-h')) return;
+
+  const w = mediaEl.naturalWidth || mediaEl.videoWidth || 0;
+  const h = mediaEl.naturalHeight || mediaEl.videoHeight || 0;
+  if (!w || !h) return;
+
+  const ratio = w / h;
+  const wrap = polaroid.querySelector('.polaroid-img-wrap');
+  if (wrap) {
+    wrap.style.aspectRatio = `${w} / ${h}`;
+    wrap.style.setProperty('--img-aspect', `${w} / ${h}`);
+  }
+
+  polaroid.classList.remove('polaroid--portrait', 'polaroid--wide', 'polaroid--square', 'polaroid--landscape');
+
+  if (ratio < 0.85) {
+    polaroid.classList.add('polaroid--portrait');
+  } else if (ratio > 1.55) {
+    polaroid.classList.add('polaroid--wide');
+  } else if (ratio >= 0.85 && ratio <= 1.15) {
+    polaroid.classList.add('polaroid--square');
+  } else {
+    polaroid.classList.add('polaroid--landscape');
+  }
+}
+
 function buildPolaroid(photo, idx) {
   const url   = photo.secureUrl || photo.url || '';
   const cap   = photo.caption || '';
@@ -637,8 +679,8 @@ function buildPolaroid(photo, idx) {
   const frameSizeLabel = customWidth > 0 ? `${customWidth}px` : { small: 'Small', standard: 'Standard', large: 'Large' }[frameSize];
   const isVideo = photo.resourceType === 'video';
   const media = isVideo
-    ? `<video class="polaroid-video" autoplay muted loop playsinline preload="auto" style="object-fit:${objectFit};" aria-label="${esc(cap || 'Memory video')}"><source src="${esc(url)}"></video>`
-    : `<img src="${esc(optimizeCloudinaryUrl(url))}" style="object-fit:${objectFit};" alt="${esc(cap || 'Memory photograph')}" loading="lazy">`;
+    ? `<video class="polaroid-video" autoplay muted loop playsinline preload="auto" style="object-fit:${objectFit};" onloadedmetadata="updatePolaroidAspect(this)" aria-label="${esc(cap || 'Memory video')}"><source src="${esc(url)}"></video>`
+    : `<img src="${esc(optimizeCloudinaryUrl(url))}" style="object-fit:${objectFit};" alt="${esc(cap || 'Memory photograph')}" loading="lazy" onload="updatePolaroidAspect(this)">`;
 
   const inlineStyles = [
     customWidth > 0 ? `width:${customWidth}px; max-width:96%;` : '',
@@ -1457,7 +1499,16 @@ async function cyclePhotoSize(photoId) {
   const current = sizes.includes(photo.frameSize) ? photo.frameSize : 'standard';
   const next = sizes[(sizes.indexOf(current) + 1) % sizes.length];
   try {
-    const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: { frameSize: next, customWidth: 0, customHeight: 0, imgHeight: 0, objectFit: 'cover' } });
+    const updated = await api(`/photos/${photoId}`, {
+      method: 'PUT',
+      body: {
+        frameSize: next,
+        customWidth: 0,
+        customHeight: 0,
+        imgHeight: 0,
+        objectFit: photo.objectFit || 'cover'
+      }
+    });
     Object.assign(photo, updated);
     if (state.chapters[state.currentIdx]) {
       const chId = state.chapters[state.currentIdx]._id;
@@ -1468,7 +1519,9 @@ async function cyclePhotoSize(photoId) {
       }
     }
     renderRightPage(state.chapters[state.currentIdx]);
-    toast(`Polaroid size: ${next} ♥`);
+    updateNav();
+    const label = next === 'large' ? 'Large (Hero / Bigger)' : (next === 'small' ? 'Small' : 'Standard');
+    toast(`Polaroid size: ${label} ♥`);
   } catch (err) { toast(err.message); }
 }
 
@@ -1665,9 +1718,17 @@ function updateCropPreview() {
     wrap.classList.toggle('fit-cover', objectFit === 'cover');
 
     if (imgHeight > 0) {
-      wrap.style.height = `${Math.min(260, Math.max(80, Math.round(imgHeight * 0.75)))}px`;
+      wrap.style.height = `${Math.min(280, Math.max(80, Math.round(imgHeight * 0.75)))}px`;
     } else {
-      wrap.style.height = '180px';
+      const mediaEl = wrap?.querySelector('img, video');
+      const nw = mediaEl?.naturalWidth || mediaEl?.videoWidth || 0;
+      const nh = mediaEl?.naturalHeight || mediaEl?.videoHeight || 0;
+      if (nw > 0 && nh > 0) {
+        const previewW = parseInt(previewPolaroid?.style.width || '200', 10) - 20;
+        wrap.style.height = `${Math.min(280, Math.max(80, Math.round(previewW * (nh / nw))))}px`;
+      } else {
+        wrap.style.height = '180px';
+      }
     }
   }
 
@@ -1689,7 +1750,7 @@ function openCaptionModal(photoId) {
   const frameSizeChoice = isCustom ? 'custom' : (['small', 'standard', 'large'].includes(p.frameSize) ? p.frameSize : 'standard');
   $('#captionFrameSize').value = frameSizeChoice;
 
-  const defaultWidth = p.customWidth || (p.frameSize === 'small' ? 180 : (p.frameSize === 'large' ? 320 : 240));
+  const defaultWidth = p.customWidth || (p.frameSize === 'small' ? 180 : (p.frameSize === 'large' ? 360 : 240));
   $('#captionCustomWidth').value  = defaultWidth;
   $('#captionCustomHeight').value = p.customHeight || 0;
   $('#captionImgHeight').value    = p.imgHeight || 0;
@@ -1723,9 +1784,9 @@ function openCaptionModal(photoId) {
   if (wrap) {
     const url = p.secureUrl || p.url || '';
     if (p.resourceType === 'video') {
-      wrap.innerHTML = `<video autoplay muted loop playsinline preload="auto" style="object-fit:${objectFit};" src="${esc(url)}"></video>`;
+      wrap.innerHTML = `<video autoplay muted loop playsinline preload="auto" style="object-fit:${objectFit};" onloadedmetadata="updateCropPreview()" src="${esc(url)}"></video>`;
     } else {
-      wrap.innerHTML = `<img src="${esc(optimizeCloudinaryUrl(url))}" style="object-fit:${objectFit};" alt="Preview">`;
+      wrap.innerHTML = `<img src="${esc(optimizeCloudinaryUrl(url))}" style="object-fit:${objectFit};" onload="updateCropPreview()" alt="Preview">`;
     }
   }
 
@@ -1747,7 +1808,7 @@ $('#captionFrameSize')?.addEventListener('change', e => {
   const slider = $('#captionCustomWidth');
   if (sz === 'small') slider.value = 180;
   else if (sz === 'standard') slider.value = 240;
-  else if (sz === 'large') slider.value = 320;
+  else if (sz === 'large') slider.value = 360;
   if (sz !== 'custom') {
     $('#captionCustomHeight').value = 0;
     $('#captionImgHeight').value = 0;
@@ -1804,9 +1865,28 @@ $('#matchAspectBtn')?.addEventListener('click', () => {
 });
 
 $('#aspectAutoBtn')?.addEventListener('click', () => {
-  $('#captionCustomHeight').value = 0;
-  $('#captionImgHeight').value = 0;
+  const wrap = $('#cropPreviewWrap');
+  const mediaEl = wrap?.querySelector('img, video');
+  const natW = mediaEl?.naturalWidth || mediaEl?.videoWidth || 0;
+  const natH = mediaEl?.naturalHeight || mediaEl?.videoHeight || 0;
+  const curW = parseInt($('#captionCustomWidth')?.value || '240', 10);
+  if (natW > 0 && natH > 0) {
+    $('#captionImgHeight').value = Math.min(600, Math.max(90, Math.round(curW * (natH / natW))));
+    $('#captionFrameSize').value = 'custom';
+  } else {
+    $('#captionCustomHeight').value = 0;
+    $('#captionImgHeight').value = 0;
+  }
   updateCropPreview();
+  toast('Polaroid matched to natural photo shape! ♥');
+});
+
+$('#aspectPortraitBtn')?.addEventListener('click', () => {
+  const curW = parseInt($('#captionCustomWidth')?.value || '240', 10);
+  $('#captionImgHeight').value = Math.round(curW * (4 / 3)); // 3:4 portrait
+  $('#captionFrameSize').value = 'custom';
+  updateCropPreview();
+  toast('Set to 3:4 Portrait shape ♥');
 });
 
 $('#aspectSquareBtn')?.addEventListener('click', () => {
