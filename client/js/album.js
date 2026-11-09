@@ -80,6 +80,14 @@ const CryptoVault = {
   }
 };
 
+function optimizeCloudinaryUrl(url, { width = 800, quality = 'auto' } = {}) {
+  if (!url || typeof url !== 'string') return url;
+  if (!url.includes('res.cloudinary.com') || !url.includes('/upload/')) return url;
+  if (url.includes('/upload/f_auto') || url.includes('/upload/c_')) return url;
+  if (url.includes('/video/upload/')) return url;
+  return url.replace('/upload/', `/upload/f_auto,q_${quality},w_${width},c_limit/`);
+}
+
 // ----------------------------------------------------------------
 // 3. API CLIENT
 // ----------------------------------------------------------------
@@ -95,7 +103,8 @@ const state = {
   lightIdx: 0,
   isMobile: window.innerWidth < 768,
   showingRight: false, // mobile only: showing right page?
-  isAnimating: false
+  isAnimating: false,
+  dataCache: new Map()
 };
 
 async function api(path, opts = {}) {
@@ -240,13 +249,42 @@ async function loadChapters() {
 async function loadChapterData(idx) {
   const chapter = state.chapters[idx];
   if (!chapter) return;
-  const [photos, entries] = await Promise.all([
-    api(`/photos/chapter/${chapter._id}`),
-    api(`/entries/chapter/${chapter._id}`)
-  ]);
-  state.photos  = photos;
-  state.entries = entries;
-  state.mediaPage = 0;
+
+  const cached = state.dataCache.get(chapter._id);
+  if (cached) {
+    state.photos  = cached.photos;
+    state.entries = cached.entries;
+    state.mediaPage = 0;
+  } else {
+    const [photos, entries] = await Promise.all([
+      api(`/photos/chapter/${chapter._id}`),
+      api(`/entries/chapter/${chapter._id}`)
+    ]);
+    state.photos  = photos;
+    state.entries = entries;
+    state.mediaPage = 0;
+    state.dataCache.set(chapter._id, { photos, entries });
+  }
+
+  // Preload adjacent chapters in background for 60fps instant transitions
+  preloadAdjacentChapters(idx);
+}
+
+function preloadAdjacentChapters(currentIdx) {
+  const toPreload = [currentIdx + 1, currentIdx - 1];
+  for (const idx of toPreload) {
+    if (idx >= 0 && idx < state.chapters.length) {
+      const ch = state.chapters[idx];
+      if (ch && !state.dataCache.has(ch._id)) {
+        Promise.all([
+          api(`/photos/chapter/${ch._id}`),
+          api(`/entries/chapter/${ch._id}`)
+        ]).then(([photos, entries]) => {
+          state.dataCache.set(ch._id, { photos, entries });
+        }).catch(() => {});
+      }
+    }
+  }
 }
 
 function scrapbookItems() {
@@ -304,15 +342,16 @@ async function renderChapterSpread(idx, direction = 'next') {
   const chapter = state.chapters[idx];
   if (!chapter) return;
 
-  // Animate page turn
-  if (state.currentIdx >= 0) {
-    await animatePageTurn(direction);
-  }
-
+  const isTurn = state.currentIdx >= 0;
   state.currentIdx = idx;
-  await loadChapterData(idx);
-  syncMobilePageForCurrentChapter();
 
+  // Run data fetch and animation concurrently for instantaneous response
+  const loadPromise = loadChapterData(idx);
+  const turnPromise = isTurn ? animatePageTurn(direction) : Promise.resolve();
+
+  await Promise.all([loadPromise, turnPromise]);
+
+  syncMobilePageForCurrentChapter();
   renderLeftPage(chapter);
   renderRightPage(chapter);
   updateHudPosition(`Chapter ${String(chapter.chapterNumber || idx + 1).padStart(2,'0')} · ${esc(chapter.title)}`);
@@ -475,14 +514,28 @@ function buildPolaroid(photo, idx) {
   const cap   = photo.caption || '';
   const isFav = photo.isFavourite;
   const frameSize = ['small', 'standard', 'large'].includes(photo.frameSize) ? photo.frameSize : 'standard';
-  const frameSizeLabel = { small: 'Small', standard: 'Standard', large: 'Large' }[frameSize];
+  const customWidth = photo.customWidth || 0;
+  const rotation = photo.rotation || 0;
+  const cropZoom = photo.cropZoom || 1;
+  const cropX = photo.cropX || 0;
+  const cropY = photo.cropY || 0;
+
+  const frameSizeLabel = customWidth > 0 ? `${customWidth}px` : { small: 'Small', standard: 'Standard', large: 'Large' }[frameSize];
   const isVideo = photo.resourceType === 'video';
   const media = isVideo
-    ? `<video class="polaroid-video" controls playsinline preload="metadata" aria-label="${esc(cap || 'Memory video')}"><source src="${esc(url)}"></video>`
-    : `<img src="${esc(url)}" alt="${esc(cap || 'Memory photograph')}" loading="lazy">`;
+    ? `<video class="polaroid-video" autoplay muted loop playsinline preload="auto" aria-label="${esc(cap || 'Memory video')}"><source src="${esc(url)}"></video>`
+    : `<img src="${esc(optimizeCloudinaryUrl(url))}" alt="${esc(cap || 'Memory photograph')}" loading="lazy">`;
+
+  const inlineStyles = [
+    customWidth > 0 ? `width:${customWidth}px; max-width:96%;` : '',
+    `--rot:${rotation}deg;`,
+    `--crop-zoom:${cropZoom};`,
+    `--crop-x:${cropX}px;`,
+    `--crop-y:${cropY}px;`
+  ].filter(Boolean).join(' ');
 
   return `
-    <figure class="polaroid polaroid--${frameSize}${isVideo ? ' polaroid--video' : ''}" data-photo-idx="${idx}" data-photo-id="${photo._id}">
+    <figure class="polaroid polaroid--${frameSize}${isVideo ? ' polaroid--video' : ''}" style="${inlineStyles}" data-photo-idx="${idx}" data-photo-id="${photo._id}">
       <div class="washi-tape" aria-hidden="true"></div>
       <span class="polaroid-size-tag" aria-hidden="true">${frameSizeLabel}</span>
       <div class="polaroid-img-wrap">
@@ -495,8 +548,8 @@ function buildPolaroid(photo, idx) {
             : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
           }
         </button>
-        <button class="polaroid-action polaroid-size-action" data-cycle-size="${photo._id}" title="Frame size: ${frameSizeLabel}. Click to change size" aria-label="Change photo size, currently ${frameSizeLabel}">⤢</button>
-        <button class="polaroid-action" data-caption-btn="${photo._id}" title="Edit caption">✎</button>
+        <button class="polaroid-action polaroid-size-action" data-cycle-size="${photo._id}" title="Frame size: ${frameSizeLabel}. Click to cycle size" aria-label="Change photo size">⤢</button>
+        <button class="polaroid-action" data-caption-btn="${photo._id}" title="Customize polaroid size, rotation, crop & caption">✎</button>
         <button class="polaroid-action" data-del-photo="${photo._id}" title="Delete photo" style="color:#c0392b;">×</button>
       </div>
       <figcaption class="polaroid-caption" data-caption-label="${photo._id}">${esc(cap) || '&nbsp;'}</figcaption>
@@ -535,16 +588,16 @@ async function animatePageTurn(direction = 'next') {
   const back  = overlay.querySelector('.turn-page-back');
 
   if (direction === 'next') {
-    front.style.animation = 'pageTurnForward 0.55s cubic-bezier(0.3,0.9,0.3,1) forwards';
-    back.style.animation  = 'pageTurnForward 0.55s cubic-bezier(0.3,0.9,0.3,1) forwards';
-    back.style.animationDelay = '0.1s';
+    front.style.animation = 'pageTurnForward 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) forwards';
+    back.style.animation  = 'pageTurnForward 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) forwards';
+    back.style.animationDelay = '0.04s';
   } else {
-    front.style.animation = 'pageTurnBackward 0.55s cubic-bezier(0.3,0.9,0.3,1) forwards';
-    back.style.animation  = 'pageTurnBackward 0.55s cubic-bezier(0.3,0.9,0.3,1) forwards';
-    back.style.animationDelay = '0.1s';
+    front.style.animation = 'pageTurnBackward 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) forwards';
+    back.style.animation  = 'pageTurnBackward 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) forwards';
+    back.style.animationDelay = '0.04s';
   }
 
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => setTimeout(r, 340));
   overlay.classList.remove('turning');
   front.style.animation = '';
   back.style.animation  = '';
@@ -875,8 +928,8 @@ async function openFavs() {
         <figure class="fav-polaroid" data-fav-photo="${p._id}">
           <div class="fav-img-wrap">
             ${p.resourceType === 'video'
-              ? `<video controls playsinline preload="metadata" aria-label="${esc(p.caption || 'Favourite video')}"><source src="${esc(url)}"></video>`
-              : `<img src="${esc(url)}" alt="${esc(p.caption || 'Favourite')}" loading="lazy">`
+              ? `<video autoplay muted loop playsinline preload="auto" aria-label="${esc(p.caption || 'Favourite video')}"><source src="${esc(url)}"></video>`
+              : `<img src="${esc(optimizeCloudinaryUrl(url))}" alt="${esc(p.caption || 'Favourite')}" loading="lazy">`
             }
           </div>
           <div class="fav-caption">${esc(p.caption || 'A favourite moment')}</div>
@@ -1034,7 +1087,9 @@ async function uploadPhotos(files, chapterId) {
       uploadedCount = Array.isArray(result) ? result.length : files.length;
     }
 
+    state.dataCache.delete(chapterId);
     state.photos = await api(`/photos/chapter/${chapterId}`);
+    state.dataCache.set(chapterId, { photos: state.photos, entries: state.entries });
     await loadChapters();
     renderRightPage(chapter);
     toast(`✓ ${uploadedCount} ${uploadedCount === 1 ? 'memory' : 'memories'} added to this page! ♥`);
@@ -1165,7 +1220,9 @@ document.addEventListener('click', async e => {
       try {
         await api(`/photos/${delBtn.dataset.delPhoto}`, { method: 'DELETE' });
         toast('Photograph removed.');
+        state.dataCache.delete(state.chapters[state.currentIdx]._id);
         state.photos = await api(`/photos/chapter/${state.chapters[state.currentIdx]._id}`);
+        state.dataCache.set(state.chapters[state.currentIdx]._id, { photos: state.photos, entries: state.entries });
         renderRightPage(state.chapters[state.currentIdx]);
         await loadChapters();
       } catch (err) { toast(err.message); }
@@ -1268,8 +1325,16 @@ async function cyclePhotoSize(photoId) {
   const current = sizes.includes(photo.frameSize) ? photo.frameSize : 'standard';
   const next = sizes[(sizes.indexOf(current) + 1) % sizes.length];
   try {
-    const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: { frameSize: next } });
+    const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: { frameSize: next, customWidth: 0 } });
     Object.assign(photo, updated);
+    if (state.chapters[state.currentIdx]) {
+      const chId = state.chapters[state.currentIdx]._id;
+      if (state.dataCache.has(chId)) {
+        const cached = state.dataCache.get(chId);
+        const cp = cached.photos?.find(ph => ph._id === photoId);
+        if (cp) Object.assign(cp, updated);
+      }
+    }
     renderRightPage(state.chapters[state.currentIdx]);
     toast(`Polaroid size: ${next} ♥`);
   } catch (err) { toast(err.message); }
@@ -1383,28 +1448,174 @@ document.addEventListener('keydown', e => {
 });
 
 // ----------------------------------------------------------------
-// 15. CAPTION MODAL
+// 15. POLAROID CUSTOMIZER & CAPTION MODAL
 // ----------------------------------------------------------------
+function updateCropPreview() {
+  const pId = $('#captionPhotoId')?.value;
+  const p = state.photos.find(ph => ph._id === pId);
+  const wrap = $('#cropPreviewWrap');
+  if (!wrap) return;
+
+  const capText = $('#captionText')?.value.trim() || 'Caption preview…';
+  const previewCaption = $('#cropPreviewCaption');
+  if (previewCaption) previewCaption.textContent = capText;
+
+  const frameSize = $('#captionFrameSize')?.value || 'standard';
+  const customWidthInput = $('#captionCustomWidth');
+  const customWidth = parseInt(customWidthInput?.value || '240', 10);
+  const rot = parseInt($('#captionRotation')?.value || '0', 10);
+  const zoom = parseFloat($('#captionCropZoom')?.value || '1');
+  const cropX = parseInt($('#captionCropX')?.value || '0', 10);
+  const cropY = parseInt($('#captionCropY')?.value || '0', 10);
+
+  // Update badges
+  const widthValBadge = $('#captionCustomWidthVal');
+  if (widthValBadge) {
+    widthValBadge.textContent = frameSize === 'custom' ? `${customWidth}px` : (frameSize.charAt(0).toUpperCase() + frameSize.slice(1));
+  }
+  const widthPxBadge = $('#customWidthPx');
+  if (widthPxBadge) widthPxBadge.textContent = `${customWidth}px`;
+
+  const rotVal = $('#captionRotationVal');
+  if (rotVal) rotVal.textContent = `${rot}°`;
+
+  const zoomVal = $('#captionCropZoomVal');
+  if (zoomVal) zoomVal.textContent = `${zoom.toFixed(2)}x`;
+
+  const cropXVal = $('#captionCropXVal');
+  if (cropXVal) cropXVal.textContent = `${cropX}px`;
+
+  const cropYVal = $('#captionCropYVal');
+  if (cropYVal) cropYVal.textContent = `${cropY}px`;
+
+  // Scale preview polaroid frame
+  const previewPolaroid = $('#previewPolaroid');
+  if (previewPolaroid) {
+    let previewWidth = 200;
+    if (frameSize === 'small') previewWidth = 160;
+    else if (frameSize === 'large') previewWidth = 240;
+    else if (frameSize === 'custom') previewWidth = Math.min(260, Math.max(140, Math.round(customWidth * 0.75)));
+    previewPolaroid.style.width = `${previewWidth}px`;
+  }
+
+  const mediaEl = wrap.querySelector('img, video');
+  if (mediaEl) {
+    mediaEl.style.transform = `translate3d(${cropX}px, ${cropY}px, 0) scale(${zoom}) rotate(${rot}deg)`;
+  }
+}
+
 function openCaptionModal(photoId) {
   const p = state.photos.find(ph => ph._id === photoId);
-  $('#captionPhotoId').value  = photoId;
-  $('#captionText').value     = p?.caption || '';
-  $('#captionFrameSize').value = ['small', 'standard', 'large'].includes(p?.frameSize) ? p.frameSize : 'standard';
+  if (!p) return;
+
+  $('#captionPhotoId').value   = photoId;
+  $('#captionText').value      = p.caption || '';
+
+  const frameSizeChoice = p.customWidth > 0 ? 'custom' : (['small', 'standard', 'large'].includes(p.frameSize) ? p.frameSize : 'standard');
+  $('#captionFrameSize').value = frameSizeChoice;
+
+  const defaultWidth = p.customWidth || (p.frameSize === 'small' ? 180 : (p.frameSize === 'large' ? 320 : 240));
+  $('#captionCustomWidth').value = defaultWidth;
+  $('#captionRotation').value    = p.rotation || 0;
+  $('#captionCropZoom').value    = p.cropZoom || 1;
+  $('#captionCropX').value       = p.cropX || 0;
+  $('#captionCropY').value       = p.cropY || 0;
+
+  // Set up live preview media in modal
+  const wrap = $('#cropPreviewWrap');
+  if (wrap) {
+    const url = p.secureUrl || p.url || '';
+    if (p.resourceType === 'video') {
+      wrap.innerHTML = `<video autoplay muted loop playsinline preload="auto" src="${esc(url)}"></video>`;
+    } else {
+      wrap.innerHTML = `<img src="${esc(optimizeCloudinaryUrl(url))}" alt="Preview">`;
+    }
+  }
+
+  updateCropPreview();
   openModal('captionModalOverlay');
-  setTimeout(() => $('#captionText')?.focus(), 100);
+  setTimeout(() => $('#captionText')?.focus(), 80);
 }
+
+// Bind customizer interactive events
+$('#captionText')?.addEventListener('input', updateCropPreview);
+
+$('#captionFrameSize')?.addEventListener('change', e => {
+  const sz = e.target.value;
+  const slider = $('#captionCustomWidth');
+  if (sz === 'small') slider.value = 180;
+  else if (sz === 'standard') slider.value = 240;
+  else if (sz === 'large') slider.value = 320;
+  updateCropPreview();
+});
+
+$('#captionCustomWidth')?.addEventListener('input', () => {
+  $('#captionFrameSize').value = 'custom';
+  updateCropPreview();
+});
+
+$('#captionRotation')?.addEventListener('input', updateCropPreview);
+
+$('#rotateLeftBtn')?.addEventListener('click', () => {
+  const rotEl = $('#captionRotation');
+  let r = parseInt(rotEl.value || '0', 10) - 90;
+  if (r < -180) r += 360;
+  rotEl.value = r;
+  updateCropPreview();
+});
+
+$('#rotateRightBtn')?.addEventListener('click', () => {
+  const rotEl = $('#captionRotation');
+  let r = parseInt(rotEl.value || '0', 10) + 90;
+  if (r > 180) r -= 360;
+  rotEl.value = r;
+  updateCropPreview();
+});
+
+$('#rotateZeroBtn')?.addEventListener('click', () => {
+  $('#captionRotation').value = 0;
+  updateCropPreview();
+});
+
+$('#captionCropZoom')?.addEventListener('input', updateCropPreview);
+$('#captionCropX')?.addEventListener('input', updateCropPreview);
+$('#captionCropY')?.addEventListener('input', updateCropPreview);
+
+$('#resetCropBtn')?.addEventListener('click', () => {
+  $('#captionCropZoom').value = 1;
+  $('#captionCropX').value = 0;
+  $('#captionCropY').value = 0;
+  updateCropPreview();
+});
 
 $('#captionForm')?.addEventListener('submit', async e => {
   e.preventDefault();
   const photoId = $('#captionPhotoId').value;
   const caption = $('#captionText').value.trim();
-  const frameSize = $('#captionFrameSize').value;
+  const frameSizeChoice = $('#captionFrameSize').value;
+  const customWidth = frameSizeChoice === 'custom' ? parseInt($('#captionCustomWidth').value, 10) : 0;
+  const frameSize = ['small', 'standard', 'large'].includes(frameSizeChoice) ? frameSizeChoice : 'standard';
+  const rotation = parseInt($('#captionRotation').value || '0', 10);
+  const cropZoom = parseFloat($('#captionCropZoom').value || '1');
+  const cropX = parseInt($('#captionCropX').value || '0', 10);
+  const cropY = parseInt($('#captionCropY').value || '0', 10);
+
   try {
-    const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: { caption, frameSize } });
-    // Update local
+    const payload = { caption, frameSize, customWidth, rotation, cropZoom, cropX, cropY };
+    const updated = await api(`/photos/${photoId}`, { method: 'PUT', body: payload });
+    // Update local state and memory cache
     const p = state.photos.find(ph => ph._id === photoId);
     if (p) Object.assign(p, updated);
-    renderRightPage(state.chapters[state.currentIdx]);
+
+    if (state.chapters[state.currentIdx]) {
+      const chId = state.chapters[state.currentIdx]._id;
+      if (state.dataCache.has(chId)) {
+        const cached = state.dataCache.get(chId);
+        const cp = cached.photos?.find(ph => ph._id === photoId);
+        if (cp) Object.assign(cp, updated);
+      }
+      renderRightPage(state.chapters[state.currentIdx]);
+    }
     closeModal('captionModalOverlay');
     toast('Memory styling saved! ♥');
   } catch (err) { toast(err.message); }

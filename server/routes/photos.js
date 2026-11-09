@@ -207,6 +207,11 @@ router.put('/:id', csrf, asyncHandler(async (req, res) => {
   if (typeof req.body.caption === 'string') updates.caption = req.body.caption.trim();
   if (['small', 'standard', 'large'].includes(req.body.frameSize)) updates.frameSize = req.body.frameSize;
   if (typeof req.body.displayOrder === 'number') updates.displayOrder = req.body.displayOrder;
+  if (typeof req.body.customWidth === 'number') updates.customWidth = Math.max(0, Math.min(1200, req.body.customWidth));
+  if (typeof req.body.rotation === 'number') updates.rotation = req.body.rotation;
+  if (typeof req.body.cropZoom === 'number') updates.cropZoom = Math.max(0.5, Math.min(5, req.body.cropZoom));
+  if (typeof req.body.cropX === 'number') updates.cropX = req.body.cropX;
+  if (typeof req.body.cropY === 'number') updates.cropY = req.body.cropY;
 
   const p = await Photo.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
   if (!p) return res.status(404).json({ error: 'Photo not found.' });

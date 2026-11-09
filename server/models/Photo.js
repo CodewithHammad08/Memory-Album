@@ -11,6 +11,11 @@ module.exports = model('Photo', new Schema({
   caption: { type: String, trim: true, maxlength: 500, default: '' },
   // Lets each memory have its own place in the scrapbook composition.
   frameSize: { type: String, enum: ['small', 'standard', 'large'], default: 'standard' },
+  customWidth: { type: Number, default: 0 },
+  rotation: { type: Number, default: 0 },
+  cropZoom: { type: Number, default: 1 },
+  cropX: { type: Number, default: 0 },
+  cropY: { type: Number, default: 0 },
   isFavourite: { type: Boolean, default: false, index: true },
   displayOrder: { type: Number, default: 0 }
 }, { timestamps: true }));

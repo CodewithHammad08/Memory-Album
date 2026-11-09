@@ -72,27 +72,47 @@
 <!-- ===== MAIN ALBUM APP ===== -->
 <div id="albumApp" class="album-app" hidden aria-hidden="true">
 
-  <!-- Floating HUD Controls -->
-  <div class="album-hud" id="albumHud">
-    <div class="hud-left">
-      <button class="hud-btn hud-btn--icon" id="indexBtn" title="Table of Contents">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <span class="hud-title">Our Story <span class="hud-heart">♥</span></span>
+  <!-- LEFT SIDEBAR NAVBAR -->
+  <aside class="album-sidebar sidebar-left" id="sidebarLeft" aria-label="Album navigation and tools">
+    <div class="sidebar-top">
+      <div class="sidebar-brand">
+        <span class="sidebar-heart">♥</span>
+        <span class="sidebar-title">Our Story</span>
+      </div>
+      <div class="sidebar-position" id="hudPosition">The Cover</div>
     </div>
-    <div class="hud-center" id="hudPosition">The Cover</div>
-    <div class="hud-right">
-      <button class="hud-btn hud-btn--icon" id="favBtn" title="Favourite Memories">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+
+    <div class="sidebar-center">
+      <button class="side-btn side-nav-btn" id="navPrev" title="Previous Page" aria-label="Previous page" disabled>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+        <span class="side-btn-label">Previous</span>
       </button>
-      <button class="hud-btn hud-btn--icon" id="backupBtn" title="Backup & Restore">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+
+      <button class="side-btn" id="indexBtn" title="Table of Contents (Index)" aria-label="Table of Contents">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <span class="side-btn-label">Contents</span>
       </button>
-      <button class="hud-btn hud-btn--icon" id="lockBtn" title="Lock Album">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+
+      <button class="side-btn" id="navAddNote" title="Write a Note / Story" aria-label="Write a note">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span class="side-btn-label">Write Note</span>
+      </button>
+
+      <button class="side-btn" id="navAddTextPage" title="Add a Full Text Page" aria-label="Add a text page">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 10h16M4 15h10M4 20h10"/></svg>
+        <span class="side-btn-label">Text Page</span>
+      </button>
+
+      <button class="side-btn" id="favBtn" title="Favourite Memories" aria-label="Favourite Memories">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span class="side-btn-label">Favourites</span>
       </button>
     </div>
-  </div>
+
+    <div class="sidebar-bottom">
+      <div class="sidebar-stamp" aria-hidden="true">★ forever ★</div>
+    </div>
+  </aside>
 
   <!-- Album Stage -->
   <div class="album-stage" id="albumStage">
@@ -179,35 +199,41 @@
 
   </div><!-- end .album-stage -->
 
-  <!-- Bottom Navigation Bar -->
-  <nav class="album-nav" id="albumNav" aria-label="Album navigation">
-    <button class="nav-btn nav-prev" id="navPrev" aria-label="Previous page" disabled>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-      <span>Previous</span>
-    </button>
-    <div class="nav-center">
-      <button class="nav-action" id="navAddChapter" title="Add a new chapter">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        New Chapter
-      </button>
-      <button class="nav-action nav-action--photos" id="navAddPhotos" title="Add photographs">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        Add Media
-      </button>
-      <button class="nav-action" id="navAddTextPage" title="Add a text page to this chapter">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 10h16M4 15h10M4 20h10"/></svg>
-        Text Page
-      </button>
-      <button class="nav-action" id="navAddNote" title="Write a note">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        Write Note
+  <!-- RIGHT SIDEBAR NAVBAR -->
+  <aside class="album-sidebar sidebar-right" id="sidebarRight" aria-label="Album actions and tools">
+    <div class="sidebar-top">
+      <button class="side-btn side-nav-btn side-nav-next" id="navNext" title="Next Page" aria-label="Next page">
+        <span class="side-btn-label">Next</span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
-    <button class="nav-btn nav-next" id="navNext" aria-label="Next page">
-      <span>Next</span>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-  </nav>
+
+    <div class="sidebar-center">
+      <button class="side-btn side-btn--highlight" id="navAddPhotos" title="Add Photos & Videos" aria-label="Add media">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span class="side-btn-label">Add Media</span>
+      </button>
+
+      <button class="side-btn" id="navAddChapter" title="Create New Chapter" aria-label="New Chapter">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span class="side-btn-label">New Chapter</span>
+      </button>
+
+      <button class="side-btn" id="backupBtn" title="Backup & Restore Archive" aria-label="Backup & Restore">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span class="side-btn-label">Backup</span>
+      </button>
+
+      <button class="side-btn side-btn--lock" id="lockBtn" title="Lock Scrapbook" aria-label="Lock Album">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span class="side-btn-label">Lock</span>
+      </button>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="sidebar-stamp" aria-hidden="true">Volume 01</div>
+    </div>
+  </aside>
 
 </div><!-- end #albumApp -->
 
@@ -415,30 +441,112 @@
   </div>
 </div>
 
-<!-- Caption Edit Modal -->
+<!-- Photo Customizer & Caption Modal -->
 <div class="modal-overlay" id="captionModalOverlay" aria-hidden="true">
-  <div class="modal-sheet paper-modal modal-small" role="dialog" aria-modal="true" aria-labelledby="captionModalHeading">
+  <div class="modal-sheet paper-modal modal-customizer" role="dialog" aria-modal="true" aria-labelledby="captionModalHeading">
     <button class="modal-close" data-modal-close="captionModalOverlay" aria-label="Close">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
-    <p class="modal-eyebrow">CAPTION THIS MEMORY</p>
-    <h2 id="captionModalHeading" class="modal-title">Edit <em>Caption</em></h2>
+    <p class="modal-eyebrow">CUSTOMIZE POLAROID &amp; CAPTION</p>
+    <h2 id="captionModalHeading" class="modal-title">Edit &amp; <em>Style Memory</em></h2>
+
     <form id="captionForm" novalidate>
       <input type="hidden" id="captionPhotoId">
-      <div class="form-group">
-        <label for="captionText">Photo caption</label>
-        <input type="text" id="captionText" placeholder="A sweet word about this memory…" maxlength="300">
+
+      <div class="photo-editor-layout">
+        <!-- Live Preview Stage -->
+        <div class="editor-preview-col">
+          <div class="editor-preview-header">Live Preview</div>
+          <div class="crop-preview-box">
+            <div class="crop-preview-polaroid" id="previewPolaroid">
+              <div class="washi-tape" aria-hidden="true"></div>
+              <div class="crop-preview-wrap" id="cropPreviewWrap">
+                <!-- Injected img or video -->
+              </div>
+              <div class="crop-preview-caption" id="cropPreviewCaption">Caption preview…</div>
+            </div>
+          </div>
+          <div class="editor-preview-hint">Live adjustments reflect immediately</div>
+        </div>
+
+        <!-- Controls Column -->
+        <div class="editor-controls-col">
+          <!-- Caption -->
+          <div class="form-group">
+            <label for="captionText">Photo Caption</label>
+            <input type="text" id="captionText" placeholder="A sweet word about this memory…" maxlength="300">
+          </div>
+
+          <!-- Polaroid Sizing -->
+          <div class="form-group customizer-group">
+            <div class="customizer-label-row">
+              <label for="captionFrameSize">Polaroid Size</label>
+              <span class="customizer-badge" id="captionCustomWidthVal">Standard</span>
+            </div>
+            <select id="captionFrameSize">
+              <option value="small">Small — delicate keepsake</option>
+              <option value="standard">Standard — classic polaroid</option>
+              <option value="large">Large — dramatic moment</option>
+              <option value="custom">Custom Width…</option>
+            </select>
+            <div class="slider-row" id="customWidthSliderRow" style="margin-top:8px;">
+              <div class="slider-meta">
+                <span>Exact Width:</span>
+                <span id="customWidthPx">240px</span>
+              </div>
+              <input type="range" id="captionCustomWidth" min="120" max="600" step="5" value="240">
+            </div>
+          </div>
+
+          <!-- Rotation Controls -->
+          <div class="form-group customizer-group">
+            <div class="customizer-label-row">
+              <label>Rotation &amp; Tilt</label>
+              <span class="customizer-badge" id="captionRotationVal">0°</span>
+            </div>
+            <div class="rotate-quick-row">
+              <button type="button" class="btn-tool" id="rotateLeftBtn" title="Rotate 90° counter-clockwise">↺ -90°</button>
+              <button type="button" class="btn-tool" id="rotateZeroBtn" title="Reset angle">0° Reset</button>
+              <button type="button" class="btn-tool" id="rotateRightBtn" title="Rotate 90° clockwise">↻ +90°</button>
+            </div>
+            <div class="slider-row" style="margin-top:6px;">
+              <input type="range" id="captionRotation" min="-180" max="180" step="1" value="0">
+            </div>
+          </div>
+
+          <!-- Cropping Controls (Zoom & Pan) -->
+          <div class="form-group customizer-group">
+            <div class="customizer-label-row">
+              <label>Crop, Zoom &amp; Pan</label>
+              <button type="button" class="btn-link" id="resetCropBtn" style="font-size:11px; padding:0;">Reset Crop</button>
+            </div>
+            <div class="slider-row">
+              <div class="slider-meta">
+                <span>Zoom Scale:</span>
+                <span id="captionCropZoomVal">1.0x</span>
+              </div>
+              <input type="range" id="captionCropZoom" min="1" max="3" step="0.05" value="1">
+            </div>
+            <div class="slider-row">
+              <div class="slider-meta">
+                <span>Horizontal Pan (X):</span>
+                <span id="captionCropXVal">0px</span>
+              </div>
+              <input type="range" id="captionCropX" min="-120" max="120" step="1" value="0">
+            </div>
+            <div class="slider-row">
+              <div class="slider-meta">
+                <span>Vertical Pan (Y):</span>
+                <span id="captionCropYVal">0px</span>
+              </div>
+              <input type="range" id="captionCropY" min="-120" max="120" step="1" value="0">
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label for="captionFrameSize">Polaroid size</label>
-        <select id="captionFrameSize">
-          <option value="small">Small — a little keepsake</option>
-          <option value="standard">Standard — just right</option>
-          <option value="large">Large — make it the moment</option>
-        </select>
-      </div>
-      <div class="form-actions">
-        <button type="submit" class="btn-primary">Save Memory ♥</button>
+
+      <div class="form-actions" style="margin-top:16px;">
+        <button type="submit" class="btn-primary">Save Memory Styling ♥</button>
         <button type="button" class="btn-secondary" data-modal-close="captionModalOverlay">Cancel</button>
       </div>
     </form>
