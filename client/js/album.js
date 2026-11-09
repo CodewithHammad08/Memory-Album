@@ -538,6 +538,12 @@ function renderRightPage(chapter) {
     ).join('');
     content.innerHTML = `
       <div class="photo-composition layout-${layout}${photos.filter(p => p.resourceType === 'video').length === 2 ? ' layout-videos' : ''}" id="photoComposition">
+        <div class="scrapbook-embellishments" aria-hidden="true">
+          <div class="scrapbook-stamp"><span>MEMORIES</span><span>★ LOVE ★</span></div>
+          <div class="scrapbook-doodle scrapbook-doodle--heart1">♥</div>
+          <div class="scrapbook-doodle scrapbook-doodle--star1">✦</div>
+          <div class="scrapbook-doodle scrapbook-doodle--star2">✧</div>
+        </div>
         ${pageMarkup}
         <div class="scrapbook-page-bar">
           <div class="scrapbook-page-info">
@@ -682,8 +688,9 @@ function buildPolaroid(photo, idx) {
     ? `<video class="polaroid-video" autoplay muted loop playsinline preload="auto" style="object-fit:${objectFit};" onloadedmetadata="updatePolaroidAspect(this)" aria-label="${esc(cap || 'Memory video')}"><source src="${esc(url)}"></video>`
     : `<img src="${esc(optimizeCloudinaryUrl(url))}" style="object-fit:${objectFit};" alt="${esc(cap || 'Memory photograph')}" loading="lazy" onload="updatePolaroidAspect(this)">`;
 
+  const isCustomSize = photo.frameSize === 'custom' && customWidth > 0;
   const inlineStyles = [
-    customWidth > 0 ? `width:${customWidth}px; max-width:96%;` : '',
+    isCustomSize ? `width:${customWidth}px; max-width:96%;` : '',
     customHeight > 0 ? `--polaroid-h:${customHeight}px; height:${customHeight}px;` : '',
     imgHeight > 0 ? `--img-h:${imgHeight}px;` : '',
     `--obj-fit:${objectFit};`,

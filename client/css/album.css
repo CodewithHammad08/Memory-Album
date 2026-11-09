@@ -1010,6 +1010,15 @@ img { max-width: 100%; display: block; }
   box-shadow: inset 4px 0 16px rgba(89,55,71,0.06);
 }
 
+.page-right .page-content {
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px 6px;
+  height: 100%;
+  max-height: 100%;
+}
+
 /* Page content area */
 .page-content {
   position: relative;
@@ -1666,6 +1675,46 @@ img { max-width: 100%; display: block; }
   to { transform: translateY(5px) rotate(6deg); opacity: .9; }
 }
 
+/* Scrapbook Decorative Embellishments on the Paper */
+.scrapbook-embellishments {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.scrapbook-stamp {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  width: 58px;
+  height: 58px;
+  border: 1.5px dashed rgba(180, 95, 128, 0.32);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(12deg);
+  color: rgba(180, 95, 128, 0.35);
+  font-family: var(--ui);
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.scrapbook-doodle {
+  position: absolute;
+  color: rgba(180, 95, 128, 0.22);
+  font-family: var(--script);
+  line-height: 1;
+  user-select: none;
+}
+.scrapbook-doodle--heart1 { top: 48%; left: 47%; font-size: 24px; transform: rotate(-12deg); }
+.scrapbook-doodle--star1  { bottom: 14%; left: 6%; font-size: 18px; transform: rotate(18deg); }
+.scrapbook-doodle--star2  { top: 8%; left: 8%; font-size: 16px; transform: rotate(-8deg); }
+
 /* Layout variations via classes */
 .photo-composition.layout-1  { /* 1 photo: big centered */
   gap: 0;
@@ -1687,15 +1736,16 @@ img { max-width: 100%; display: block; }
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: space-around;
   align-items: center;
-  align-content: center;
-  gap: 12px 14px;
+  align-content: space-around;
+  gap: 8px 10px;
   width: 100%;
   height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 8px 12px 4px;
+  max-height: 100%;
+  overflow: hidden !important;
+  padding: 6px 8px;
+  box-sizing: border-box;
 }
 
 .photo-composition.layout-many {
@@ -2001,13 +2051,60 @@ img { max-width: 100%; display: block; }
   border-radius: 2px;
 }
 
-.polaroid--small .washi-tape { background: rgba(164, 185, 214, .56); }
-.polaroid--large .washi-tape { width: 64px; background: rgba(232, 183, 102, .55); }
+/* Unique Washi Tape per Polaroid in Scrapbook Collage */
+.polaroid[data-photo-idx="0"] .washi-tape,
+.polaroid:nth-of-type(1) .washi-tape {
+  top: -8px;
+  left: 28%;
+  transform: rotate(-10deg);
+  background: rgba(217, 139, 167, 0.7);
+}
+.polaroid[data-photo-idx="0"] .washi-tape::before,
+.polaroid:nth-of-type(1) .washi-tape::before {
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,0.4) 0px, rgba(255,255,255,0.4) 2px, transparent 2px, transparent 6px);
+}
+
+.polaroid[data-photo-idx="1"] .washi-tape,
+.polaroid:nth-of-type(2) .washi-tape {
+  top: -7px;
+  right: 24%;
+  left: auto;
+  transform: rotate(12deg);
+  background: rgba(232, 183, 102, 0.7);
+}
+.polaroid[data-photo-idx="1"] .washi-tape::before,
+.polaroid:nth-of-type(2) .washi-tape::before {
+  background: radial-gradient(circle, rgba(255,255,255,0.5) 1.5px, transparent 1.5px) 0 0 / 6px 6px;
+}
+
+.polaroid[data-photo-idx="2"] .washi-tape,
+.polaroid:nth-of-type(3) .washi-tape {
+  top: -8px;
+  left: 45%;
+  transform: rotate(4deg);
+  background: rgba(164, 185, 214, 0.7);
+}
+
+.polaroid[data-photo-idx="3"] .washi-tape,
+.polaroid:nth-of-type(4) .washi-tape {
+  top: -7px;
+  right: 28%;
+  left: auto;
+  transform: rotate(-9deg);
+  background: rgba(196, 113, 143, 0.7);
+}
+.polaroid[data-photo-idx="3"] .washi-tape::before,
+.polaroid:nth-of-type(4) .washi-tape::before {
+  background: repeating-linear-gradient(-45deg, rgba(255,255,255,0.4) 0px, rgba(255,255,255,0.4) 2px, transparent 2px, transparent 6px);
+}
+
+.polaroid--small .washi-tape { background: rgba(164, 185, 214, .65); }
+.polaroid--large .washi-tape { width: 64px; background: rgba(232, 183, 102, .7); }
 .polaroid--large::after {
   content: '♥';
   position: absolute;
-  right: -12px;
-  bottom: 17px;
+  right: -10px;
+  bottom: 12px;
   color: rgba(180,95,128,.62);
   font: 23px/1 var(--script);
   text-shadow: 0 2px 6px rgba(89,55,71,.12);
@@ -2069,52 +2166,101 @@ img { max-width: 100%; display: block; }
   flex: 0 0 min(94%, 400px);
 }
 
+/* Layout-4: Authentic Scrapbook Collage Placement */
 .layout-4 .polaroid {
-  width: calc(50% - 10px);
-  max-width: 260px;
-  transition: all 0.25s ease;
+  width: calc(50% - 12px);
+  max-width: 235px;
+  margin: 0;
+  padding: 8px 8px 26px;
+  background: linear-gradient(145deg, #ffffff 0%, #fffdf9 100%);
+  box-shadow: 0 4px 16px rgba(89, 55, 71, 0.14), 0 1px 3px rgba(89, 55, 71, 0.08);
+  border-radius: 2px;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, z-index 0.1s;
+  box-sizing: border-box;
 }
 
-.layout-4 .polaroid.polaroid--large {
-  width: min(94%, 400px);
-  max-width: 94%;
-  flex: 0 0 min(94%, 400px);
+.layout-4 .polaroid[data-photo-idx="0"],
+.layout-4 .polaroid:nth-of-type(1) {
+  --tilt: -3deg;
+  transform: rotate(-3deg) translate(-2px, -3px);
+  z-index: 2;
 }
 
-.layout-4 .polaroid.polaroid--small {
-  width: calc(44% - 10px);
-  max-width: 180px;
+.layout-4 .polaroid[data-photo-idx="1"],
+.layout-4 .polaroid:nth-of-type(2) {
+  --tilt: 2.8deg;
+  transform: rotate(2.8deg) translate(3px, 5px);
+  z-index: 3;
+}
+
+.layout-4 .polaroid[data-photo-idx="2"],
+.layout-4 .polaroid:nth-of-type(3) {
+  --tilt: 2deg;
+  transform: rotate(2deg) translate(2px, -4px);
+  z-index: 4;
+}
+
+.layout-4 .polaroid[data-photo-idx="3"],
+.layout-4 .polaroid:nth-of-type(4) {
+  --tilt: -3.2deg;
+  transform: rotate(-3.2deg) translate(-2px, 3px);
+  z-index: 3;
+}
+
+.layout-4 .polaroid:hover {
+  transform: rotate(0deg) scale(1.06) translateY(-4px) !important;
+  z-index: 40 !important;
+  box-shadow: 0 18px 40px rgba(89, 55, 71, 0.28), 0 4px 10px rgba(89, 55, 71, 0.15) !important;
 }
 
 .layout-4 .polaroid .polaroid-img-wrap {
-  min-height: 110px;
-  max-height: min(28vh, 180px);
+  width: 100%;
+  min-height: 85px;
+  max-height: min(22vh, 145px);
   aspect-ratio: 4 / 3;
 }
 
 /* Natural aspect ratio & shape classes across all polaroids */
-.polaroid.polaroid--portrait .polaroid-img-wrap {
+.polaroid.polaroid--portrait .polaroid-img-wrap,
+.layout-4 .polaroid.polaroid--portrait .polaroid-img-wrap {
   aspect-ratio: 3 / 4 !important;
-  max-height: min(38vh, 250px);
+  max-height: min(27vh, 180px) !important;
 }
 
-.polaroid.polaroid--wide .polaroid-img-wrap {
+.polaroid.polaroid--wide .polaroid-img-wrap,
+.layout-4 .polaroid.polaroid--wide .polaroid-img-wrap {
   aspect-ratio: 16 / 9 !important;
-  max-height: min(25vh, 150px);
+  max-height: min(18vh, 120px) !important;
 }
 
-.polaroid.polaroid--square .polaroid-img-wrap {
+.polaroid.polaroid--square .polaroid-img-wrap,
+.layout-4 .polaroid.polaroid--square .polaroid-img-wrap {
   aspect-ratio: 1 / 1 !important;
-  max-height: min(30vh, 190px);
+  max-height: min(22vh, 145px) !important;
 }
 
-.polaroid.polaroid--landscape .polaroid-img-wrap {
+.polaroid.polaroid--landscape .polaroid-img-wrap,
+.layout-4 .polaroid.polaroid--landscape .polaroid-img-wrap {
   aspect-ratio: 4 / 3;
-  max-height: min(28vh, 180px);
+  max-height: min(22vh, 145px);
+}
+
+.layout-4 .polaroid.polaroid--large {
+  width: min(88%, 370px) !important;
+  max-width: 88% !important;
+  flex: 0 0 min(88%, 370px) !important;
+  --tilt: -1deg;
+  transform: rotate(-1deg) !important;
+  z-index: 10;
 }
 
 .layout-4 .polaroid.polaroid--large .polaroid-img-wrap {
-  max-height: min(40vh, 280px);
+  max-height: min(28vh, 190px) !important;
+}
+
+.layout-4 .polaroid.polaroid--small {
+  width: calc(44% - 10px);
+  max-width: 175px;
 }
 
 .layout-many .polaroid {
@@ -3042,21 +3188,66 @@ img { max-width: 100%; display: block; }
     transition: transform 0.8s cubic-bezier(0.3, 1, 0.3, 1), opacity 0.1s 0.75s;
   }
 
-  /* The photo page is a real phone canvas, not a squeezed desktop half-page. */
-  .page-right .page-content { padding: 12px 10px 18px; }
-  .page-right .photo-composition { height: auto; min-height: 100%; justify-content: flex-start; gap: 18px; }
-  .page-right .layout-1 .polaroid { width: min(94%, 430px); max-width: 94%; margin: 10px auto; }
-  .page-right .layout-1 .polaroid-img-wrap { height: min(56vh, 430px); }
-  .page-right .layout-2 .polaroid { width: calc(50% - 12px); }
-  .page-right .layout-2 .polaroid-img-wrap { height: min(31vh, 230px); }
-  .page-right .layout-3 .polaroid:first-child .polaroid-img-wrap { height: min(28vh, 210px); }
-  .page-right .layout-3 .polaroid:not(:first-child) .polaroid-img-wrap { height: min(25vh, 180px); }
-  .page-right .layout-4 .polaroid { width: calc(50% - 8px); max-width: 200px; }
-  .page-right .layout-4 .polaroid.polaroid--large { width: min(96%, 380px); max-width: 96%; }
-  .page-right .layout-4 .polaroid .polaroid-img-wrap { min-height: 100px; max-height: min(28vh, 180px); aspect-ratio: 4 / 3; }
-  .page-right .polaroid.polaroid--portrait .polaroid-img-wrap { aspect-ratio: 3 / 4 !important; max-height: min(36vh, 230px); }
-  .page-right .polaroid.polaroid--wide .polaroid-img-wrap { aspect-ratio: 16 / 9 !important; max-height: min(22vh, 140px); }
-  .page-right .polaroid.polaroid--square .polaroid-img-wrap { aspect-ratio: 1 / 1 !important; max-height: min(28vh, 180px); }
+  /* The photo page is a real phone canvas: organic collage with zero scrolling */
+  .page-right .page-content {
+    padding: 10px 8px 12px !important;
+    overflow: hidden !important;
+  }
+  .page-right .photo-composition {
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    justify-content: space-around !important;
+    gap: 8px !important;
+  }
+  .page-right .layout-1 .polaroid { width: min(92%, 360px); max-width: 92%; margin: 10px auto; }
+  .page-right .layout-1 .polaroid-img-wrap { height: min(52vh, 360px); }
+  .page-right .layout-2 .polaroid { width: calc(50% - 8px); }
+  .page-right .layout-2 .polaroid-img-wrap { height: min(28vh, 190px); }
+  .page-right .layout-3 .polaroid:first-child .polaroid-img-wrap { height: min(26vh, 180px); }
+  .page-right .layout-3 .polaroid:not(:first-child) .polaroid-img-wrap { height: min(22vh, 150px); }
+  .page-right .photo-composition.layout-4 {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    align-content: space-around !important;
+    gap: 6px 4px !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    padding: 4px !important;
+  }
+  .page-right .layout-4 .polaroid {
+    width: calc(50% - 6px) !important;
+    max-width: 175px !important;
+    padding: 6px 6px 20px !important;
+    margin: 0 !important;
+  }
+  .page-right .layout-4 .polaroid .polaroid-img-wrap {
+    min-height: 70px !important;
+    max-height: min(18vh, 115px) !important;
+    aspect-ratio: 4 / 3;
+  }
+  .page-right .layout-4 .polaroid.polaroid--portrait .polaroid-img-wrap,
+  .page-right .polaroid.polaroid--portrait .polaroid-img-wrap {
+    aspect-ratio: 3 / 4 !important;
+    max-height: min(22vh, 140px) !important;
+  }
+  .page-right .layout-4 .polaroid.polaroid--wide .polaroid-img-wrap,
+  .page-right .polaroid.polaroid--wide .polaroid-img-wrap {
+    aspect-ratio: 16 / 9 !important;
+    max-height: min(15vh, 95px) !important;
+  }
+  .page-right .layout-4 .polaroid.polaroid--square .polaroid-img-wrap,
+  .page-right .polaroid.polaroid--square .polaroid-img-wrap {
+    aspect-ratio: 1 / 1 !important;
+    max-height: min(18vh, 115px) !important;
+  }
+  .page-right .layout-4 .polaroid.polaroid--large {
+    width: min(94%, 340px) !important;
+  }
   .page-right .layout-many .polaroid-img-wrap { height: min(22vh, 160px); }
 
   /* mobile swipe indicator */
