@@ -664,9 +664,6 @@ function updatePolaroidAspect(mediaEl) {
   const polaroid = mediaEl.closest('.polaroid');
   if (!polaroid) return;
 
-  // If user set an explicit custom height, don't override it
-  if (polaroid.style.getPropertyValue('--img-h') || polaroid.style.getPropertyValue('--polaroid-h')) return;
-
   const w = mediaEl.naturalWidth || mediaEl.videoWidth || 0;
   const h = mediaEl.naturalHeight || mediaEl.videoHeight || 0;
   if (!w || !h) return;
@@ -682,12 +679,80 @@ function updatePolaroidAspect(mediaEl) {
 
   if (ratio < 0.85) {
     polaroid.classList.add('polaroid--portrait');
-  } else if (ratio > 1.55) {
+  } else if (ratio > 1.45) {
     polaroid.classList.add('polaroid--wide');
   } else if (ratio >= 0.85 && ratio <= 1.15) {
     polaroid.classList.add('polaroid--square');
   } else {
     polaroid.classList.add('polaroid--landscape');
+  }
+
+  // If user explicitly set custom height or width via caption modal, preserve their custom values
+  const hasUserCustom = polaroid.classList.contains('polaroid--custom') ||
+    polaroid.style.getPropertyValue('--img-h') ||
+    polaroid.style.getPropertyValue('--polaroid-h') ||
+    (polaroid.style.width && !polaroid.dataset.autoSized);
+
+  if (hasUserCustom) return;
+
+  const comp = polaroid.closest('.photo-composition');
+  const isLayout1 = comp?.classList.contains('layout-1') || comp?.querySelectorAll('.polaroid').length === 1;
+
+  if (isLayout1 && wrap) {
+    const isMobile = window.innerWidth <= 768;
+    const frameSize = polaroid.classList.contains('polaroid--small') ? 'small' : (polaroid.classList.contains('polaroid--large') ? 'large' : 'standard');
+    const sizeMult = frameSize === 'small' ? 0.82 : (frameSize === 'large' ? 1.16 : 1.0);
+
+    const maxH = (isMobile ? Math.min(window.innerHeight * 0.52, 360) : Math.min(window.innerHeight * 0.60, 460)) * sizeMult;
+    const maxW = (isMobile ? Math.min(window.innerWidth * 0.86, 340) : Math.min(window.innerWidth * 0.42, 450)) * sizeMult;
+
+    let imgW, imgH;
+    if (ratio < 1) {
+      // Portrait image: height drives sizing, width adapts to match aspect ratio exactly
+      imgH = maxH;
+      imgW = Math.round(imgH * ratio);
+      if (imgW > maxW) {
+        imgW = maxW;
+        imgH = Math.round(imgW / ratio);
+      }
+    } else {
+      // Landscape or square image: width drives sizing, height adapts
+      imgW = maxW;
+      imgH = Math.round(imgW / ratio);
+      if (imgH > maxH) {
+        imgH = maxH;
+        imgW = Math.round(imgH * ratio);
+      }
+    }
+
+    wrap.style.width = `${imgW}px`;
+    wrap.style.height = `${imgH}px`;
+    wrap.style.maxWidth = '100%';
+    wrap.style.maxHeight = `${maxH}px`;
+
+    const polPaddingHoriz = isMobile ? 12 : 20; // 6px padding each side on mobile, 10px on desktop
+    const polW = imgW + polPaddingHoriz;
+    polaroid.style.width = `${polW}px`;
+    polaroid.style.maxWidth = '94%';
+    polaroid.dataset.autoSized = 'true';
+  } else if (comp?.classList.contains('layout-2') && wrap) {
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) {
+      const maxH = Math.min(window.innerHeight * 0.38, 270);
+      const maxW = 280;
+      let imgW, imgH;
+      if (ratio < 0.9) {
+        imgH = maxH;
+        imgW = Math.min(maxW, Math.round(imgH * ratio));
+      } else {
+        imgW = maxW;
+        imgH = Math.min(maxH, Math.round(imgW / ratio));
+      }
+      wrap.style.width = `${imgW}px`;
+      wrap.style.height = `${imgH}px`;
+      polaroid.style.width = `${imgW + 20}px`;
+      polaroid.dataset.autoSized = 'true';
+    }
   }
 }
 
@@ -2312,6 +2377,9 @@ window.addEventListener('resize', () => {
     $('#bookSpread')?.classList.remove('show-right');
     $('#pageRight')?.classList.remove('mobile-media-active');
   }
+  document.querySelectorAll('.polaroid img, .polaroid video').forEach(el => {
+    if (el.complete || el.readyState >= 1) updatePolaroidAspect(el);
+  });
   updateNav();
 });
 
