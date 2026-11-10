@@ -699,6 +699,130 @@ img { max-width: 100%; display: block; }
   color: #fff !important;
 }
 
+.side-btn--logout:hover:not(:disabled) {
+  background: #2e1823;
+  border-color: #2e1823;
+  color: #fff !important;
+}
+
+.side-btn--logout:hover:not(:disabled) .side-btn-label {
+  color: #fff !important;
+}
+
+/* ======================================================
+   EDIT LOCK TOGGLE & VIEW-ONLY SCRAPBOOK MODE
+   ====================================================== */
+.side-btn--lock-toggle {
+  position: relative;
+  transition: all 0.22s ease;
+}
+
+/* When Edit Lock is ON (Locked / Editing Disabled) */
+.is-edit-locked .side-btn--lock-toggle {
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.14), rgba(180, 95, 128, 0.2));
+  border-color: rgba(192, 57, 43, 0.42);
+  color: #c0392b;
+}
+
+.is-edit-locked .side-btn--lock-toggle .side-btn-label {
+  color: #c0392b;
+  font-weight: 700;
+}
+
+.is-edit-locked .side-btn--lock-toggle .lock-icon-locked {
+  display: block;
+  stroke: #c0392b;
+}
+
+.is-edit-locked .side-btn--lock-toggle .lock-icon-unlocked {
+  display: none;
+}
+
+.is-edit-locked .side-btn--lock-toggle:hover:not(:disabled) {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #ffffff !important;
+}
+
+.is-edit-locked .side-btn--lock-toggle:hover:not(:disabled) .side-btn-label,
+.is-edit-locked .side-btn--lock-toggle:hover:not(:disabled) svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* When Edit Lock is OFF (Unlocked / Editing Allowed) */
+:not(.is-edit-locked) .side-btn--lock-toggle {
+  background: linear-gradient(135deg, rgba(39, 174, 96, 0.12), rgba(46, 204, 113, 0.18));
+  border-color: rgba(39, 174, 96, 0.4);
+  color: #27ae60;
+}
+
+:not(.is-edit-locked) .side-btn--lock-toggle .side-btn-label {
+  color: #27ae60;
+  font-weight: 700;
+}
+
+:not(.is-edit-locked) .side-btn--lock-toggle .lock-icon-locked {
+  display: none;
+}
+
+:not(.is-edit-locked) .side-btn--lock-toggle .lock-icon-unlocked {
+  display: block;
+  stroke: #27ae60;
+}
+
+:not(.is-edit-locked) .side-btn--lock-toggle:hover:not(:disabled) {
+  background: #27ae60;
+  border-color: #27ae60;
+  color: #ffffff !important;
+}
+
+:not(.is-edit-locked) .side-btn--lock-toggle:hover:not(:disabled) .side-btn-label,
+:not(.is-edit-locked) .side-btn--lock-toggle:hover:not(:disabled) svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* In edit-locked mode, completely hide editing/modifying buttons */
+.is-edit-locked #navAddPhotos,
+.is-edit-locked #navAddPage,
+.is-edit-locked #navDeletePage,
+.is-edit-locked #navAddChapter,
+.is-edit-locked #navAddNote,
+.is-edit-locked #navAddTextPage,
+.is-edit-locked .scrapbook-page-actions,
+.is-edit-locked .scrapbook-add-page-btn,
+.is-edit-locked .scrapbook-del-page-btn,
+.is-edit-locked .chapter-tools-row,
+.is-edit-locked .chapter-card-tools,
+.is-edit-locked .chapter-add-note-btn,
+.is-edit-locked [data-edit-chapter],
+.is-edit-locked [data-del-chapter],
+.is-edit-locked [data-add-note],
+.is-edit-locked .entry-card-tools,
+.is-edit-locked [data-edit-entry],
+.is-edit-locked [data-del-entry],
+.is-edit-locked .polaroid-actions,
+.is-edit-locked .polaroid-size-tag,
+.is-edit-locked #lightboxCapEdit,
+.is-edit-locked #lightboxDelete,
+.is-edit-locked .upload-zone-btn,
+.is-edit-locked #indexAddChapter,
+.is-edit-locked .btn-add-chapter {
+  display: none !important;
+}
+
+/* In edit-locked mode, polaroids captions and dropzones look read-only */
+.is-edit-locked .polaroid-caption {
+  cursor: default !important;
+}
+
+.is-edit-locked .photo-upload-zone--newpage {
+  border-style: solid;
+  border-color: rgba(180, 95, 128, 0.2);
+  cursor: default;
+}
+
 /* ======================================================
    ALBUM STAGE — WHERE THE BOOK LIVES
    ====================================================== */
@@ -3512,6 +3636,17 @@ img { max-width: 100%; display: block; }
     border: none;
     padding: 0;
     gap: 6px;
+  }
+
+  .sidebar-center {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    max-width: 100%;
+  }
+
+  .sidebar-center::-webkit-scrollbar {
+    display: none;
   }
 
   .sidebar-bottom { display: none; }

@@ -104,7 +104,8 @@ const state = {
   isMobile: window.innerWidth < 768,
   showingRight: false, // mobile only: showing right page?
   isAnimating: false,
-  dataCache: new Map()
+  dataCache: new Map(),
+  editLocked: true // Lock ON by default: protects scrapbook from accidental edits
 };
 
 async function api(path, opts = {}) {
@@ -188,9 +189,57 @@ async function onAuthenticated() {
     app.style.display = 'flex';
   }
   if (state.user) $('#hudPosition') && ($('#hudPosition').dataset.username = state.user.username);
+  initEditLock();
   await loadChapters();
   await renderCoverSpread();
 }
+
+// ----------------------------------------------------------------
+// EDIT LOCK / READ-ONLY SCRAPBOOK MODE
+// ----------------------------------------------------------------
+function initEditLock() {
+  const saved = localStorage.getItem('memory_album_edit_locked');
+  state.editLocked = saved !== null ? saved === 'true' : true;
+  setEditLock(state.editLocked, false);
+}
+
+function setEditLock(isLocked, showToast = true) {
+  state.editLocked = !!isLocked;
+  try {
+    localStorage.setItem('memory_album_edit_locked', state.editLocked ? 'true' : 'false');
+  } catch { /* ignore storage error */ }
+
+  const app = $('#albumApp');
+  if (app) app.classList.toggle('is-edit-locked', state.editLocked);
+
+  const btn = $('#editLockBtn');
+  const label = $('#editLockLabel');
+  if (btn) {
+    btn.setAttribute('aria-pressed', state.editLocked ? 'true' : 'false');
+    btn.title = state.editLocked
+      ? 'Lock is ON (Editing Disabled) — Click to Turn OFF to edit'
+      : 'Lock is OFF (Editing Allowed) — Click to Turn ON to lock';
+    btn.classList.toggle('side-btn--locked', state.editLocked);
+    btn.classList.toggle('side-btn--unlocked', !state.editLocked);
+  }
+  if (label) {
+    label.textContent = state.editLocked ? 'Lock: ON' : 'Lock: OFF';
+  }
+
+  updateNav();
+  if (showToast) {
+    toast(state.editLocked
+      ? '🔒 Lock is ON: Editing is disabled.'
+      : '🔓 Lock is OFF: Editing is now enabled.'
+    );
+  }
+}
+
+function toggleEditLock() {
+  setEditLock(!state.editLocked, true);
+}
+
+$('#editLockBtn')?.addEventListener('click', toggleEditLock);
 
 // Login form
 $('#loginForm')?.addEventListener('submit', async e => {
@@ -214,8 +263,8 @@ $('#pwToggle')?.addEventListener('click', () => {
   inp.type = inp.type === 'password' ? 'text' : 'password';
 });
 
-// Lock
-$('#lockBtn')?.addEventListener('click', async () => {
+// Logout
+const handleLogout = async () => {
   try { await api('/auth/logout', { method: 'POST' }); } catch { /* ignore */ }
   finally {
     state.user = null;
@@ -223,9 +272,11 @@ $('#lockBtn')?.addEventListener('click', async () => {
     state.chapters = [];
     state.currentIdx = -1;
     showLock();
-    toast('Album locked. ♥');
+    toast('Logged out. See you soon! ♥');
   }
-});
+};
+$('#logoutBtn')?.addEventListener('click', handleLogout);
+$('#lockBtn')?.addEventListener('click', handleLogout);
 
 // Auto-lock after 10 min inactivity
 let _lastActivity = Date.now();
@@ -234,7 +285,7 @@ let _lastActivity = Date.now();
 );
 setInterval(() => {
   if (!$('#albumApp').hidden && Date.now() - _lastActivity > 10 * 60 * 1000) {
-    $('#lockBtn')?.click();
+    $('#logoutBtn')?.click() || $('#lockBtn')?.click();
   }
 }, 30000);
 
@@ -640,6 +691,10 @@ function renderRightPage(chapter) {
 }
 
 async function addNewChapterPage() {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button to add pages.');
+    return;
+  }
   if (state.currentIdx < 0 || !state.chapters[state.currentIdx]) {
     toast('Please open a chapter first, then add a page.');
     return;
@@ -662,6 +717,10 @@ async function addNewChapterPage() {
 }
 
 async function deleteCurrentMediaPage() {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button to delete pages.');
+    return;
+  }
   if (state.currentIdx < 0 || !state.chapters[state.currentIdx]) {
     toast('Please open a chapter first.');
     return;
@@ -1301,27 +1360,43 @@ function attachDropZone(container, chapterId) {
   if (!zone) return;
 
   zone.addEventListener('dragover', e => {
+    if (state.editLocked) return;
     e.preventDefault();
     zone.classList.add('drag-over');
   });
   zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
   zone.addEventListener('drop', e => {
+    if (state.editLocked) {
+      toast('🔒 Lock is ON. Turn off the Lock button to add media.');
+      return;
+    }
     e.preventDefault();
     zone.classList.remove('drag-over');
     const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
     if (files.length) uploadPhotos(files, chapterId);
   });
-  zone.addEventListener('click', () => triggerPhotoInput(chapterId));
+  zone.addEventListener('click', () => {
+    if (state.editLocked) {
+      toast('🔒 Lock is ON. Turn off the Lock button to add media.');
+      return;
+    }
+    triggerPhotoInput(chapterId);
+  });
 
   // Also attach to ".photo-composition" if it already exists (add more photos)
   const comp = container.querySelector('.photo-composition');
   if (comp) {
     comp.addEventListener('dragover', e => {
+      if (state.editLocked) return;
       e.preventDefault();
       comp.style.outline = '2px dashed var(--deep)';
     });
     comp.addEventListener('dragleave', () => comp.style.outline = '');
     comp.addEventListener('drop', e => {
+      if (state.editLocked) {
+        toast('🔒 Lock is ON. Turn off the Lock button to add media.');
+        return;
+      }
       e.preventDefault();
       comp.style.outline = '';
       const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
@@ -1331,6 +1406,10 @@ function attachDropZone(container, chapterId) {
 }
 
 function triggerPhotoInput(chapterId) {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button to add media.');
+    return;
+  }
   const inp = $('#globalPhotoInput');
   inp.dataset.chapterId = chapterId;
   inp.click();
@@ -1344,12 +1423,20 @@ $('#globalPhotoInput')?.addEventListener('change', e => {
 });
 
 $('#navAddPhotos')?.addEventListener('click', () => {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button to add media.');
+    return;
+  }
   const chapter = state.chapters[state.currentIdx];
   if (!chapter) { toast('Open a chapter first, then add media.'); return; }
   triggerPhotoInput(chapter._id);
 });
 
 async function uploadPhotos(files, chapterId) {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button to upload photos.');
+    return;
+  }
   const chapter = state.chapters.find(c => c._id === chapterId);
   if (!chapter) { toast('Chapter not found.'); return; }
 
@@ -1557,6 +1644,10 @@ document.addEventListener('click', async e => {
   const sizeBtn = e.target.closest('[data-cycle-size]');
   if (sizeBtn) {
     e.stopPropagation();
+    if (state.editLocked) {
+      toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to resize photos.');
+      return;
+    }
     await cyclePhotoSize(sizeBtn.dataset.cycleSize);
     return;
   }
@@ -1565,6 +1656,10 @@ document.addEventListener('click', async e => {
   const capBtn = e.target.closest('[data-caption-btn]');
   if (capBtn) {
     e.stopPropagation();
+    if (state.editLocked) {
+      toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to edit photos.');
+      return;
+    }
     openCaptionModal(capBtn.dataset.captionBtn);
     return;
   }
@@ -1572,6 +1667,12 @@ document.addEventListener('click', async e => {
   const capText = e.target.closest('[data-caption-label]');
   if (capText) {
     e.stopPropagation();
+    if (state.editLocked) {
+      // In locked mode, clicking caption opens the photo in lightbox instead of editor
+      const pId = capText.dataset.captionLabel;
+      if (pId) openLightbox(pId);
+      return;
+    }
     openCaptionModal(capText.dataset.captionLabel);
     return;
   }
@@ -1580,6 +1681,10 @@ document.addEventListener('click', async e => {
   const delBtn = e.target.closest('[data-del-photo]');
   if (delBtn && !delBtn.closest('.lightbox')) {
     e.stopPropagation();
+    if (state.editLocked) {
+      toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to delete photos.');
+      return;
+    }
     confirmDelete('This will permanently remove this photograph from the album and Cloudinary. This cannot be undone.', async () => {
       try {
         await api(`/photos/${delBtn.dataset.delPhoto}`, { method: 'DELETE' });
@@ -1597,6 +1702,10 @@ document.addEventListener('click', async e => {
   // ---- ADD NOTE ----
   const addNote = e.target.closest('[data-add-note]');
   if (addNote) {
+    if (state.editLocked) {
+      toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to add notes.');
+      return;
+    }
     openEntryModal(addNote.dataset.addNote);
     return;
   }
@@ -1604,6 +1713,10 @@ document.addEventListener('click', async e => {
   // ---- EDIT ENTRY ----
   const editEntry = e.target.closest('[data-edit-entry]');
   if (editEntry) {
+    if (state.editLocked) {
+      toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to edit notes.');
+      return;
+    }
     const entry = state.entries.find(en => en._id === editEntry.dataset.editEntry);
     if (entry) openEntryModal(state.chapters[state.currentIdx]._id, entry);
     return;
@@ -1612,6 +1725,10 @@ document.addEventListener('click', async e => {
   // ---- DELETE ENTRY ----
   const delEntry = e.target.closest('[data-del-entry]');
   if (delEntry) {
+    if (state.editLocked) {
+      toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to delete notes.');
+      return;
+    }
     confirmDelete('This will permanently delete this memory note. It cannot be recovered.', async () => {
       try {
         await api(`/entries/${delEntry.dataset.delEntry}`, { method: 'DELETE' });
@@ -1627,6 +1744,10 @@ document.addEventListener('click', async e => {
   // ---- EDIT CHAPTER ----
   const editCh = e.target.closest('[data-edit-chapter]');
   if (editCh) {
+    if (state.editLocked) {
+      toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to edit chapters.');
+      return;
+    }
     openChapterModal(editCh.dataset.editChapter);
     return;
   }
@@ -1634,6 +1755,10 @@ document.addEventListener('click', async e => {
   // ---- DELETE CHAPTER ----
   const delCh = e.target.closest('[data-del-chapter]');
   if (delCh) {
+    if (state.editLocked) {
+      toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to delete chapters.');
+      return;
+    }
     confirmDelete('This will permanently delete this entire chapter and ALL its photographs and notes. This cannot be undone.', async () => {
       try {
         await api(`/chapters/${delCh.dataset.delChapter}`, { method: 'DELETE' });
@@ -1683,6 +1808,10 @@ async function toggleFav(photoId, btn) {
 }
 
 async function cyclePhotoSize(photoId) {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to resize photos.');
+    return;
+  }
   const photo = state.photos.find(ph => ph._id === photoId);
   if (!photo) return;
   const sizes = ['small', 'standard', 'large'];
@@ -1801,6 +1930,10 @@ $('#lightboxFav')?.addEventListener('click', async () => {
 });
 
 $('#lightboxCapEdit')?.addEventListener('click', () => {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to edit photos.');
+    return;
+  }
   const p = state.lightList[state.lightIdx];
   if (!p) return;
   closeLightbox();
@@ -1808,6 +1941,10 @@ $('#lightboxCapEdit')?.addEventListener('click', () => {
 });
 
 $('#lightboxDelete')?.addEventListener('click', async () => {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to delete photos.');
+    return;
+  }
   const p = state.lightList[state.lightIdx];
   if (!p) return;
   confirmDelete('This will permanently delete this photograph from Cloudinary and your album. It cannot be recovered.', async () => {
@@ -1937,6 +2074,10 @@ function updateCropPreview() {
 }
 
 function openCaptionModal(photoId) {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to edit photos.');
+    return;
+  }
   const p = state.photos.find(ph => ph._id === photoId);
   if (!p) return;
 
@@ -2188,6 +2329,10 @@ $('#captionForm')?.addEventListener('submit', async e => {
 $('#navAddChapter')?.addEventListener('click', () => openChapterModal());
 
 function openChapterModal(chapterId = null) {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to create or edit chapters.');
+    return;
+  }
   const form = $('#chapterForm');
   form.reset();
   $('#chapterFormId').value = chapterId || '';
@@ -2279,6 +2424,10 @@ $('#navAddTextPage')?.addEventListener('click', () => {
 });
 
 function openEntryModal(chapterId, entry = null, defaultPosition = 'notes') {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button in the sidebar to write or edit notes.');
+    return;
+  }
   const form = $('#entryForm');
   form.reset();
   $('#entryFormId').value = entry?._id || '';
@@ -2408,6 +2557,10 @@ $('#exportBackupBtn')?.addEventListener('click', async () => {
 });
 
 $('#runRestoreBtn')?.addEventListener('click', async () => {
+  if (state.editLocked) {
+    toast('🔒 Lock is ON. Turn off the Lock button before restoring a backup.');
+    return;
+  }
   const fileInput = $('#restoreFileInput');
   const file = fileInput?.files?.[0];
   if (!file) {
