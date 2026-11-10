@@ -252,7 +252,7 @@ async function loadChapterData(idx) {
 
   const cached = state.dataCache.get(chapter._id);
   if (cached) {
-    state.photos  = cached.photos;
+    state.photos = cached.photos;
     state.entries = cached.entries;
     state.mediaPage = 0;
   } else {
@@ -260,7 +260,7 @@ async function loadChapterData(idx) {
       api(`/photos/chapter/${chapter._id}`),
       api(`/entries/chapter/${chapter._id}`)
     ]);
-    state.photos  = photos;
+    state.photos = photos;
     state.entries = entries;
     state.mediaPage = 0;
     state.dataCache.set(chapter._id, { photos, entries });
@@ -281,7 +281,7 @@ function preloadAdjacentChapters(currentIdx) {
           api(`/entries/chapter/${ch._id}`)
         ]).then(([photos, entries]) => {
           state.dataCache.set(ch._id, { photos, entries });
-        }).catch(() => {});
+        }).catch(() => { });
       }
     }
   }
@@ -377,7 +377,7 @@ async function renderCoverSpread() {
     await loadChapterData(0);
     renderLeftPage(state.chapters[0]);
     renderRightPage(state.chapters[0]);
-    $('#pageNumLeft').textContent  = '01';
+    $('#pageNumLeft').textContent = '01';
     $('#pageNumRight').textContent = '02';
   } else {
     renderEmptySpread();
@@ -402,7 +402,7 @@ async function renderChapterSpread(idx, direction = 'next') {
   syncMobilePageForCurrentChapter();
   renderLeftPage(chapter);
   renderRightPage(chapter);
-  updateHudPosition(`Chapter ${String(chapter.chapterNumber || idx + 1).padStart(2,'0')} · ${esc(chapter.title)}`);
+  updateHudPosition(`Chapter ${String(chapter.chapterNumber || idx + 1).padStart(2, '0')} · ${esc(chapter.title)}`);
   updateNav();
   buildIndexEntries();
 }
@@ -417,7 +417,7 @@ function syncMobilePageForCurrentChapter() {
 
 function renderLeftPage(chapter) {
   const idx = state.currentIdx;
-  const num  = String(chapter.chapterNumber || idx + 1).padStart(2, '0');
+  const num = String(chapter.chapterNumber || idx + 1).padStart(2, '0');
   const entries = state.entries.filter(en => !en.pagePosition || en.pagePosition === 'notes');
 
   const noteHtml = entries.length
@@ -430,14 +430,16 @@ function renderLeftPage(chapter) {
           <div class="entry-card-title">${esc(en.title)}</div>
           <div class="entry-card-content entry-content-async" data-raw="${esc(en.encryptedContent || en.content || '')}"></div>
           ${en.encryptedQuote || en.quote
-            ? `<div class="entry-card-quote entry-quote-async" data-raw="${esc(en.encryptedQuote || en.quote || '')}"></div>`
-            : ''
-          }
+        ? `<div class="entry-card-quote entry-quote-async" data-raw="${esc(en.encryptedQuote || en.quote || '')}"></div>`
+        : ''
+      }
         </div>
       `).join('')
     : `<div style="font-family:var(--script);font-size:20px;color:var(--muted);opacity:0.7;margin-top:10px;">Nothing written yet…</div>`;
 
-  $('#pageLeftContent').innerHTML = `
+  const leftContent = $('#pageLeftContent');
+  if (leftContent) leftContent.scrollTop = 0;
+  leftContent.innerHTML = `
     <div class="chapter-left" style="position:relative;">
       <div class="chapter-num" aria-hidden="true">${num}</div>
       <p class="chapter-eyebrow">CHAPTER ${num}</p>
@@ -458,8 +460,8 @@ function renderLeftPage(chapter) {
       <div class="chapter-divider"></div>
 
       ${chapter.description
-        ? `<p class="chapter-desc">${esc(chapter.description)}</p>`
-        : ''}
+      ? `<p class="chapter-desc">${esc(chapter.description)}</p>`
+      : ''}
 
       <div class="chapter-note-area">
         <div class="chapter-note-label">Little things I remember…</div>
@@ -485,7 +487,7 @@ function renderLeftPage(chapter) {
 
 async function decryptEntryContents() {
   const contentEls = $$('.entry-content-async');
-  const quoteEls   = $$('.entry-quote-async');
+  const quoteEls = $$('.entry-quote-async');
   for (const el of contentEls) {
     el.textContent = await CryptoVault.open(el.dataset.raw);
     el.classList.remove('entry-content-async');
@@ -504,6 +506,7 @@ function renderRightPage(chapter) {
   const pageItems = chapterPages[state.mediaPage] || [];
   const photos = pageItems.filter(item => item.type === 'media').map(item => item.photo);
   const content = $('#pageRightContent');
+  if (content) content.scrollTop = 0;
   const pageNumDisplay = state.mediaPage + 1;
 
   if (!pageItems.length) {
@@ -669,8 +672,8 @@ function updatePolaroidAspect(mediaEl) {
 }
 
 function buildPolaroid(photo, idx) {
-  const url   = photo.secureUrl || photo.url || '';
-  const cap   = photo.caption || '';
+  const url = photo.secureUrl || photo.url || '';
+  const cap = photo.caption || '';
   const isFav = photo.isFavourite;
   const frameSize = ['small', 'standard', 'large'].includes(photo.frameSize) ? photo.frameSize : 'standard';
   const customWidth = photo.customWidth || 0;
@@ -710,9 +713,9 @@ function buildPolaroid(photo, idx) {
       <div class="polaroid-actions" role="group" aria-label="Photo actions">
         <button class="polaroid-action ${isFav ? 'fav-active' : ''}" data-fav="${photo._id}" title="${isFav ? 'Remove from favourites' : 'Add to favourites'}">
           ${isFav
-            ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="#d81159" stroke="#d81159" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
-            : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
-          }
+      ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="#d81159" stroke="#d81159" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
+      : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
+    }
         </button>
         <button class="polaroid-action polaroid-size-action" data-cycle-size="${photo._id}" title="Frame size: ${frameSizeLabel}. Click to cycle size" aria-label="Change photo size">⤢</button>
         <button class="polaroid-action" data-caption-btn="${photo._id}" title="Customize polaroid size, rotation, crop & caption">✎</button>
@@ -751,22 +754,22 @@ async function animatePageTurn(direction = 'next') {
   overlay.classList.add('turning');
 
   const front = overlay.querySelector('.turn-page-front');
-  const back  = overlay.querySelector('.turn-page-back');
+  const back = overlay.querySelector('.turn-page-back');
 
   if (direction === 'next') {
     front.style.animation = 'pageTurnForward 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) forwards';
-    back.style.animation  = 'pageTurnForward 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) forwards';
+    back.style.animation = 'pageTurnForward 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) forwards';
     back.style.animationDelay = '0.04s';
   } else {
     front.style.animation = 'pageTurnBackward 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) forwards';
-    back.style.animation  = 'pageTurnBackward 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) forwards';
+    back.style.animation = 'pageTurnBackward 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) forwards';
     back.style.animationDelay = '0.04s';
   }
 
   await new Promise(r => setTimeout(r, 340));
   overlay.classList.remove('turning');
   front.style.animation = '';
-  back.style.animation  = '';
+  back.style.animation = '';
   state.isAnimating = false;
 }
 
@@ -782,7 +785,7 @@ function openAlbumCover(targetIdx = 0) {
 
   if (state.chapters.length > 0) {
     const ch = state.chapters[targetIdx] || state.chapters[0];
-    updateHudPosition(`Chapter ${String(ch.chapterNumber || targetIdx + 1).padStart(2,'0')} · ${esc(ch.title)}`);
+    updateHudPosition(`Chapter ${String(ch.chapterNumber || targetIdx + 1).padStart(2, '0')} · ${esc(ch.title)}`);
   } else {
     updateHudPosition('Our Story ♥');
   }
@@ -845,7 +848,9 @@ function renderEmptySpread() {
   updateHudPosition('Our First Page');
   updateNav();
 
-  $('#pageLeftContent').innerHTML = `
+  const leftContent = $('#pageLeftContent');
+  if (leftContent) leftContent.scrollTop = 0;
+  leftContent.innerHTML = `
     <div class="spread-cover-left" style="text-align:center;">
       <div class="empty-spread-icon">✦</div>
       <div class="empty-spread-title">Your story begins here</div>
@@ -871,8 +876,8 @@ function renderEmptySpread() {
 function updateNav() {
   const prev = $('#navPrev');
   const next = $('#navNext');
-  const idx  = state.currentIdx;
-  const len  = state.chapters.length;
+  const idx = state.currentIdx;
+  const len = state.chapters.length;
   const hasPreviousMediaPage = state.mediaPage > 0;
   const hasNextMediaPage = state.mediaPage < mediaPageCount() - 1;
   // On phones the right-hand page is a separate view. Keep Next available
@@ -957,7 +962,7 @@ $('#navNext')?.addEventListener('click', async () => {
 document.addEventListener('keydown', e => {
   if ($('#albumApp').hidden) return;
   if (document.querySelector('.modal-overlay.is-open, .index-panel.is-open, .favs-panel.is-open, .lightbox.is-open')) return;
-  if (e.key === 'ArrowLeft')  $('#navPrev')?.click();
+  if (e.key === 'ArrowLeft') $('#navPrev')?.click();
   if (e.key === 'ArrowRight') $('#navNext')?.click();
 });
 
@@ -981,7 +986,7 @@ document.addEventListener('touchend', e => {
   const dy = e.changedTouches[0].clientY - _touchStartY;
   if (Math.abs(dx) < 50 || Math.abs(dy) > 80) return; // ignore small or vertical swipes
   if (dx < 0) $('#navNext')?.click();
-  else        $('#navPrev')?.click();
+  else $('#navPrev')?.click();
 }, { passive: true });
 
 // ----------------------------------------------------------------
@@ -1008,9 +1013,9 @@ function buildIndexEntries(filter = '') {
 
   container.innerHTML = chapters.map((c, i) => {
     const globalIdx = state.chapters.indexOf(c);
-    const isActive  = globalIdx === state.currentIdx;
-    const num       = String(c.chapterNumber || i + 1).padStart(2, '0');
-    const coverUrl  = c.coverPhotoId?.secureUrl || c.coverPhotoId?.url || '';
+    const isActive = globalIdx === state.currentIdx;
+    const num = String(c.chapterNumber || i + 1).padStart(2, '0');
+    const coverUrl = c.coverPhotoId?.secureUrl || c.coverPhotoId?.url || '';
 
     return `
       <div class="index-entry ${isActive ? 'active' : ''}" data-go-chapter="${globalIdx}" role="button" tabindex="0">
@@ -1023,9 +1028,9 @@ function buildIndexEntries(filter = '') {
         </div>
         <div class="index-entry-thumb">
           ${coverUrl
-            ? `<img src="${esc(coverUrl)}" alt="${esc(c.title)}" loading="lazy">`
-            : '♥'
-          }
+        ? `<img src="${esc(coverUrl)}" alt="${esc(c.title)}" loading="lazy">`
+        : '♥'
+      }
         </div>
       </div>
     `;
@@ -1090,15 +1095,15 @@ async function openFavs() {
       return;
     }
     grid.innerHTML = favs.map(p => {
-      const url   = p.secureUrl || p.url || '';
+      const url = p.secureUrl || p.url || '';
       const title = typeof p.chapterId === 'object' ? (p.chapterId?.title || '') : '';
       return `
         <figure class="fav-polaroid" data-fav-photo="${p._id}">
           <div class="fav-img-wrap">
             ${p.resourceType === 'video'
-              ? `<video autoplay muted loop playsinline preload="auto" aria-label="${esc(p.caption || 'Favourite video')}"><source src="${esc(url)}"></video>`
-              : `<img src="${esc(optimizeCloudinaryUrl(url))}" alt="${esc(p.caption || 'Favourite')}" loading="lazy">`
-            }
+          ? `<video autoplay muted loop playsinline preload="auto" aria-label="${esc(p.caption || 'Favourite video')}"><source src="${esc(url)}"></video>`
+          : `<img src="${esc(optimizeCloudinaryUrl(url))}" alt="${esc(p.caption || 'Favourite')}" loading="lazy">`
+        }
           </div>
           <div class="fav-caption">${esc(p.caption || 'A favourite moment')}</div>
           ${title ? `<div class="fav-chapter">${esc(title)}</div>` : ''}
@@ -1159,8 +1164,8 @@ function triggerPhotoInput(chapterId) {
 }
 
 $('#globalPhotoInput')?.addEventListener('change', e => {
-  const files      = Array.from(e.target.files);
-  const chapterId  = e.target.dataset.chapterId;
+  const files = Array.from(e.target.files);
+  const chapterId = e.target.dataset.chapterId;
   if (files.length && chapterId) uploadPhotos(files, chapterId);
   e.target.value = '';
 });
@@ -1289,9 +1294,9 @@ let _pendingDeleteAction = null;
 
 function confirmDelete(message, onConfirm) {
   const overlay = $('#deleteConfirmOverlay');
-  const msgEl   = $('#deleteConfirmMsg');
-  const pwdEl   = $('#deleteConfirmPassword');
-  const errEl   = $('#deleteConfirmError');
+  const msgEl = $('#deleteConfirmMsg');
+  const pwdEl = $('#deleteConfirmPassword');
+  const errEl = $('#deleteConfirmError');
 
   if (!overlay) {
     if (window.confirm(message)) onConfirm();
@@ -1300,7 +1305,7 @@ function confirmDelete(message, onConfirm) {
 
   _pendingDeleteAction = onConfirm;
   msgEl.textContent = message;
-  pwdEl.value       = '';
+  pwdEl.value = '';
   errEl.textContent = '';
   openModal('deleteConfirmOverlay');
   setTimeout(() => pwdEl.focus(), 80);
@@ -1310,7 +1315,7 @@ function confirmDelete(message, onConfirm) {
 $('#deleteConfirmBtn')?.addEventListener('click', async () => {
   const pwdEl = $('#deleteConfirmPassword');
   const errEl = $('#deleteConfirmError');
-  const btn   = $('#deleteConfirmBtn');
+  const btn = $('#deleteConfirmBtn');
   const typed = pwdEl.value.trim();
 
   if (!typed) {
@@ -1537,7 +1542,7 @@ async function cyclePhotoSize(photoId) {
 // ----------------------------------------------------------------
 function openLightbox(idx) {
   state.lightList = state.photos;
-  state.lightIdx  = Math.max(0, Math.min(idx, state.photos.length - 1));
+  state.lightIdx = Math.max(0, Math.min(idx, state.photos.length - 1));
   renderLightbox();
   $('#lightbox').classList.add('is-open');
   $('#lightbox').removeAttribute('aria-hidden');
@@ -1556,7 +1561,7 @@ function closeLightbox() {
 }
 
 function renderLightbox() {
-  const p   = state.lightList[state.lightIdx];
+  const p = state.lightList[state.lightIdx];
   if (!p) return;
   const url = p.secureUrl || p.url || '';
   const isVideo = p.resourceType === 'video';
@@ -1634,8 +1639,8 @@ $('#lightboxDelete')?.addEventListener('click', async () => {
 
 document.addEventListener('keydown', e => {
   if (!$('#lightbox').classList.contains('is-open')) return;
-  if (e.key === 'Escape')     closeLightbox();
-  if (e.key === 'ArrowLeft')  $('#lightboxPrev')?.click();
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') $('#lightboxPrev')?.click();
   if (e.key === 'ArrowRight') $('#lightboxNext')?.click();
 });
 
@@ -1750,25 +1755,25 @@ function openCaptionModal(photoId) {
   const p = state.photos.find(ph => ph._id === photoId);
   if (!p) return;
 
-  $('#captionPhotoId').value   = photoId;
-  $('#captionText').value      = p.caption || '';
+  $('#captionPhotoId').value = photoId;
+  $('#captionText').value = p.caption || '';
 
   const isCustom = (p.customWidth > 0 || p.customHeight > 0 || p.imgHeight > 0);
   const frameSizeChoice = isCustom ? 'custom' : (['small', 'standard', 'large'].includes(p.frameSize) ? p.frameSize : 'standard');
   $('#captionFrameSize').value = frameSizeChoice;
 
   const defaultWidth = p.customWidth || (p.frameSize === 'small' ? 180 : (p.frameSize === 'large' ? 360 : 240));
-  $('#captionCustomWidth').value  = defaultWidth;
+  $('#captionCustomWidth').value = defaultWidth;
   $('#captionCustomHeight').value = p.customHeight || 0;
-  $('#captionImgHeight').value    = p.imgHeight || 0;
+  $('#captionImgHeight').value = p.imgHeight || 0;
 
   const objectFit = p.objectFit || 'cover';
   if ($('#captionObjectFit')) $('#captionObjectFit').value = objectFit;
 
-  $('#captionRotation').value     = p.rotation || 0;
-  $('#captionCropZoom').value     = p.cropZoom || 1;
-  $('#captionCropX').value        = p.cropX || 0;
-  $('#captionCropY').value        = p.cropY || 0;
+  $('#captionRotation').value = p.rotation || 0;
+  $('#captionCropZoom').value = p.cropZoom || 1;
+  $('#captionCropX').value = p.cropX || 0;
+  $('#captionCropY').value = p.cropY || 0;
 
   // Populate Page in Chapter selector
   const pageSelect = $('#captionPageNumber');
@@ -2008,11 +2013,11 @@ function openChapterModal(chapterId = null) {
   if (chapterId) {
     const c = state.chapters.find(ch => ch._id === chapterId);
     if (c) {
-      $('#chapterTitle').value    = c.title || '';
-      $('#chapterDate').value     = c.date ? new Date(c.date).toISOString().split('T')[0] : '';
+      $('#chapterTitle').value = c.title || '';
+      $('#chapterDate').value = c.date ? new Date(c.date).toISOString().split('T')[0] : '';
       $('#chapterLocation').value = c.location || '';
-      $('#chapterDesc').value     = c.description || '';
-      $('#chapterMood').value     = c.mood || '';
+      $('#chapterDesc').value = c.description || '';
+      $('#chapterMood').value = c.mood || '';
       if (heading) heading.innerHTML = 'Edit a <em>Chapter</em>';
     }
   } else {
@@ -2031,13 +2036,13 @@ $('#chapterCover')?.addEventListener('change', e => {
 
 $('#chapterForm')?.addEventListener('submit', async e => {
   e.preventDefault();
-  const id       = $('#chapterFormId').value;
-  const title    = $('#chapterTitle').value.trim();
-  const date     = $('#chapterDate').value;
+  const id = $('#chapterFormId').value;
+  const title = $('#chapterTitle').value.trim();
+  const date = $('#chapterDate').value;
   const location = $('#chapterLocation').value.trim();
-  const desc     = $('#chapterDesc').value.trim();
-  const mood     = $('#chapterMood').value;
-  const cover    = $('#chapterCover')?.files?.[0];
+  const desc = $('#chapterDesc').value.trim();
+  const mood = $('#chapterMood').value;
+  const cover = $('#chapterCover')?.files?.[0];
 
   if (!title || !date) { toast('Please fill in the title and date.'); return; }
 
@@ -2091,9 +2096,9 @@ $('#navAddTextPage')?.addEventListener('click', () => {
 function openEntryModal(chapterId, entry = null, defaultPosition = 'notes') {
   const form = $('#entryForm');
   form.reset();
-  $('#entryFormId').value         = entry?._id || '';
-  $('#entryFormChapterId').value  = chapterId;
-  $('#entryPagePosition').value   = entry?.pagePosition || defaultPosition;
+  $('#entryFormId').value = entry?._id || '';
+  $('#entryFormChapterId').value = chapterId;
+  $('#entryPagePosition').value = entry?.pagePosition || defaultPosition;
 
   const heading = $('#entryModalHeading');
 
@@ -2117,18 +2122,18 @@ function openEntryModal(chapterId, entry = null, defaultPosition = 'notes') {
 
 $('#entryForm')?.addEventListener('submit', async e => {
   e.preventDefault();
-  const id        = $('#entryFormId').value;
+  const id = $('#entryFormId').value;
   const chapterId = $('#entryFormChapterId').value;
-  const title     = $('#entryTitle').value.trim();
-  const content   = $('#entryContent').value.trim();
-  const quote     = $('#entryQuote').value.trim();
+  const title = $('#entryTitle').value.trim();
+  const content = $('#entryContent').value.trim();
+  const quote = $('#entryQuote').value.trim();
   const pagePosition = $('#entryPagePosition').value;
 
   if (!title || !content) { toast('Title and content are required.'); return; }
 
   try {
     const encryptedContent = await CryptoVault.seal(content);
-    const encryptedQuote   = await CryptoVault.seal(quote);
+    const encryptedQuote = await CryptoVault.seal(quote);
     const payload = { title, encryptedContent, encryptedQuote, pagePosition };
 
     if (id) {
@@ -2175,9 +2180,9 @@ document.addEventListener('keydown', e => {
   ['chapterModalOverlay', 'entryModalOverlay', 'captionModalOverlay', 'backupModalOverlay', 'deleteConfirmOverlay'].forEach(id => {
     if ($(`#${id}`)?.classList.contains('is-open')) closeModal(id);
   });
-  if ($('#indexPanel')?.classList.contains('is-open'))  closeIndex();
-  if ($('#favsPanel')?.classList.contains('is-open'))   closeFavs();
-  if ($('#lightbox')?.classList.contains('is-open'))    closeLightbox();
+  if ($('#indexPanel')?.classList.contains('is-open')) closeIndex();
+  if ($('#favsPanel')?.classList.contains('is-open')) closeFavs();
+  if ($('#lightbox')?.classList.contains('is-open')) closeLightbox();
 });
 
 // ----------------------------------------------------------------
@@ -2290,4 +2295,3 @@ initApp().catch(err => {
   console.error('App boot error:', err);
   $('#loginError') && ($('#loginError').textContent = 'Could not connect. Please refresh.');
 });
-

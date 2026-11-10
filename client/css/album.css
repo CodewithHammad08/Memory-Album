@@ -1011,12 +1011,31 @@ img { max-width: 100%; display: block; }
 }
 
 .page-right .page-content {
-  overflow: hidden !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   display: flex;
   flex-direction: column;
-  padding: 10px 14px 6px;
+  padding: 10px 14px 16px;
   height: 100%;
-  max-height: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(217, 139, 167, 0.6) transparent;
+}
+
+.page-right .page-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.page-right .page-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.page-right .page-content::-webkit-scrollbar-thumb {
+  background: rgba(217, 139, 167, 0.6);
+  border-radius: 4px;
+}
+
+.page-right .page-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(180, 95, 128, 0.85);
 }
 
 /* Page content area */
@@ -1614,14 +1633,17 @@ img { max-width: 100%; display: block; }
 
 /* Container that holds all polaroids on the right page */
 .photo-composition {
-  height: 100%;
+  min-height: 100%;
+  height: auto;
+  width: 100%;
+  box-sizing: border-box;
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 14px 14px 24px;
   isolation: isolate;
   background:
     radial-gradient(circle at 10% 14%, rgba(217,139,167,0.18) 0 2px, transparent 2.5px),
@@ -1741,10 +1763,11 @@ img { max-width: 100%; display: block; }
   align-content: space-around;
   gap: 8px 10px;
   width: 100%;
-  height: 100%;
-  max-height: 100%;
-  overflow: hidden !important;
-  padding: 6px 8px;
+  min-height: 100%;
+  height: auto;
+  max-height: none;
+  overflow: visible !important;
+  padding: 6px 8px 24px;
   box-sizing: border-box;
 }
 
@@ -1754,7 +1777,7 @@ img { max-width: 100%; display: block; }
   gap: 10px;
   align-content: start;
   justify-items: center;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 /* ======================================================
@@ -3193,15 +3216,20 @@ img { max-width: 100%; display: block; }
     transition: transform 0.8s cubic-bezier(0.3, 1, 0.3, 1), opacity 0.1s 0.75s;
   }
 
-  /* The photo page is a real phone canvas: organic collage with zero scrolling */
+  /* Mobile right page allows vertical scrolling when photos/subpage bar overflow */
   .page-right .page-content {
-    padding: 10px 8px 12px !important;
-    overflow: hidden !important;
+    padding: 10px 8px 24px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(217, 139, 167, 0.6) transparent;
   }
   .page-right .photo-composition {
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    min-height: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
     justify-content: space-around !important;
     gap: 8px !important;
   }
@@ -3219,10 +3247,11 @@ img { max-width: 100%; display: block; }
     align-items: center !important;
     align-content: space-around !important;
     gap: 6px 4px !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
-    padding: 4px !important;
+    min-height: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 4px 4px 20px !important;
   }
   .page-right .layout-4 .polaroid {
     width: calc(50% - 6px) !important;
