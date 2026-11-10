@@ -547,7 +547,10 @@ function renderRightPage(chapter) {
               <span class="scrapbook-page-label">Page ${state.mediaPage + 1} of ${totalMediaPages}</span>
               <button class="scrapbook-page-btn" id="subPageNext" ${state.mediaPage >= totalMediaPages - 1 ? 'disabled' : ''} title="Next page">›</button>
             </div>
-            <button class="scrapbook-add-page-btn" id="subPageAdd" title="Create another new page">+ New Page</button>
+            <div class="scrapbook-page-actions">
+              <button class="scrapbook-add-page-btn" id="subPageAdd" title="Create another new page">+ New Page</button>
+              <button class="scrapbook-del-page-btn" id="subPageDelete" title="Delete this blank page">Delete Page</button>
+            </div>
           </div>
         ` : ''}
         <div class="swipe-hint" aria-hidden="true">← swipe to go back</div>
@@ -574,7 +577,10 @@ function renderRightPage(chapter) {
             <span class="scrapbook-page-label">Page ${state.mediaPage + 1} of ${totalMediaPages}</span>
             <button class="scrapbook-page-btn" id="subPageNext" ${state.mediaPage >= totalMediaPages - 1 ? 'disabled' : ''} title="Next page in this chapter">›</button>
           </div>
-          <button class="scrapbook-add-page-btn" id="subPageAdd" title="Add a new page for more photos (max 4 per page)">+ New Page</button>
+          <div class="scrapbook-page-actions">
+            <button class="scrapbook-add-page-btn" id="subPageAdd" title="Add a new page for more photos (max 4 per page)">+ New Page</button>
+            <button class="scrapbook-del-page-btn" id="subPageDelete" title="Delete this media page">Delete Page</button>
+          </div>
         </div>
       </div>
     `;
@@ -618,6 +624,11 @@ function renderRightPage(chapter) {
     addNewChapterPage();
   });
 
+  $('#subPageDelete')?.addEventListener('click', e => {
+    e.stopPropagation();
+    deleteCurrentMediaPage();
+  });
+
   $('#pageNumRight').textContent = String((idx * 2 + 2) + state.mediaPage).padStart(2, '0');
 
   if (state.isMobile && pageItems.length) {
@@ -650,7 +661,73 @@ async function addNewChapterPage() {
   toast(`New blank page created! (Page ${state.mediaPage + 1}) Add up to 4 photos ♥`);
 }
 
+async function deleteCurrentMediaPage() {
+  if (state.currentIdx < 0 || !state.chapters[state.currentIdx]) {
+    toast('Please open a chapter first.');
+    return;
+  }
+  const ch = state.chapters[state.currentIdx];
+  const chapterPages = getChapterPages();
+  const totalPages = Math.max(1, chapterPages.length);
+  const curPageIdx = state.mediaPage;
+  const pageNum = curPageIdx + 1;
+  const pageItems = chapterPages[curPageIdx] || [];
+  const photosOnThisPage = pageItems.filter(item => item.type === 'media').map(item => item.photo);
+
+  if (totalPages <= 1 && photosOnThisPage.length === 0) {
+    toast('This page is already empty.');
+    return;
+  }
+
+  const doDelete = async () => {
+    try {
+      if (photosOnThisPage.length > 0) {
+        await api(`/photos/chapter/${ch._id}/page/${pageNum}`, {
+          method: 'DELETE',
+          body: { photoIds: photosOnThisPage.map(p => p._id) }
+        });
+      }
+
+      if (state.extraPages && state.extraPages[ch._id]) {
+        state.extraPages[ch._id] = Math.max(0, state.extraPages[ch._id] - 1);
+        if (state.extraPages[ch._id] === 0) delete state.extraPages[ch._id];
+      }
+
+      state.dataCache.delete(ch._id);
+      state.photos = await api(`/photos/chapter/${ch._id}`);
+
+      const newPages = getChapterPages();
+      const newTotal = Math.max(1, newPages.length);
+
+      if (curPageIdx > 0) {
+        state.mediaPage = Math.max(0, Math.min(curPageIdx - 1, newTotal - 1));
+        await animatePageTurn('prev');
+      } else {
+        state.mediaPage = 0;
+      }
+
+      renderRightPage(ch);
+      updateNav();
+      await loadChapters();
+      toast(photosOnThisPage.length > 0 ? `Page ${pageNum} removed.` : `Blank page removed.`);
+    } catch (err) {
+      toast(err.message);
+    }
+  };
+
+  if (photosOnThisPage.length > 0) {
+    confirmDelete(
+      `This will permanently delete all ${photosOnThisPage.length} photograph${photosOnThisPage.length === 1 ? '' : 's'} on Page ${pageNum} from your album and Cloudinary. This cannot be undone.`,
+      doDelete
+    );
+  } else {
+    // Blank extra page: remove immediately without password prompt
+    await doDelete();
+  }
+}
+
 $('#navAddPage')?.addEventListener('click', addNewChapterPage);
+$('#navDeletePage')?.addEventListener('click', deleteCurrentMediaPage);
 
 function getLayout(n) {
   if (n <= 1) return '1';
@@ -973,6 +1050,17 @@ function updateNav() {
 
   if (prev) prev.disabled = !hasPreviousMediaPage && (idx <= -1 || (idx === 0 && !$('#bookCover').classList.contains('is-open')));
   if (next) next.disabled = idx >= len - 1 && !hasMobileMediaPage && !hasNextMediaPage;
+
+  const addPageBtn = $('#navAddPage');
+  if (addPageBtn) addPageBtn.disabled = idx < 0;
+
+  const delPageBtn = $('#navDeletePage');
+  if (delPageBtn) {
+    const chapterPages = getChapterPages();
+    const curItems = chapterPages[state.mediaPage] || [];
+    const hasPhotosOnPage = curItems.some(item => item.type === 'media');
+    delPageBtn.disabled = idx < 0 || (chapterPages.length <= 1 && !hasPhotosOnPage);
+  }
 }
 
 function updateHudPosition(text) {

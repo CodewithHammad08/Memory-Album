@@ -689,6 +689,16 @@ img { max-width: 100%; display: block; }
   color: #fff !important;
 }
 
+.side-btn--danger:hover:not(:disabled) {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff !important;
+}
+
+.side-btn--danger:hover:not(:disabled) .side-btn-label {
+  color: #fff !important;
+}
+
 /* ======================================================
    ALBUM STAGE — WHERE THE BOOK LIVES
    ====================================================== */
@@ -1859,6 +1869,35 @@ img { max-width: 100%; display: block; }
   background: var(--deep);
   color: #ffffff;
   border-color: var(--deep);
+  transform: translateY(-1px);
+}
+
+.scrapbook-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scrapbook-del-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: #c0392b;
+  background: #ffffff;
+  border: 1px solid rgba(192, 57, 43, 0.35);
+  padding: 4px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.scrapbook-del-page-btn:hover {
+  background: #c0392b;
+  color: #ffffff;
+  border-color: #c0392b;
   transform: translateY(-1px);
 }
 

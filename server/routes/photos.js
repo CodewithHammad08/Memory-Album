@@ -228,7 +228,59 @@ router.put('/:id', csrf, asyncHandler(async (req, res) => {
   res.json(formatPhoto(p));
 }));
 
-// 10. Delete photo
+// 10. Delete all media on a specific page in a chapter
+router.delete('/chapter/:chapterId/page/:pageNumber', csrf, asyncHandler(async (req, res) => {
+  const { chapterId, pageNumber } = req.params;
+  const targetPage = parseInt(pageNumber, 10);
+  if (isNaN(targetPage) || targetPage < 1) {
+    return res.status(400).json({ error: 'Invalid page number.' });
+  }
+
+  const chapter = await Chapter.findById(chapterId);
+  if (!chapter) return res.status(404).json({ error: 'Chapter not found.' });
+
+  const targetIds = Array.isArray(req.body?.photoIds) && req.body.photoIds.length > 0
+    ? req.body.photoIds
+    : null;
+
+  const photosOnPage = targetIds
+    ? await Photo.find({ _id: { $in: targetIds }, chapterId })
+    : await Photo.find({ chapterId, pageNumber: targetPage });
+
+  const cloud = configureCloudinary();
+  for (const p of photosOnPage) {
+    try {
+      await cloud.uploader.destroy(p.cloudinaryPublicId, {
+        resource_type: p.resourceType || 'image',
+        type: p.deliveryType || 'upload'
+      });
+    } catch (err) {
+      console.warn('Cloudinary destroy error:', err.message);
+    }
+  }
+
+  if (photosOnPage.length > 0) {
+    const idsToDelete = photosOnPage.map(p => p._id);
+    await Photo.deleteMany({ _id: { $in: idsToDelete } });
+  }
+
+  // Shift subsequent pages down by 1 so there are no page gaps
+  await Photo.updateMany(
+    { chapterId, pageNumber: { $gt: targetPage } },
+    { $inc: { pageNumber: -1 } }
+  );
+
+  // If chapter cover photo was deleted, reassign cover photo
+  const remaining = await Photo.find({ chapterId }).sort({ displayOrder: 1, createdAt: 1 });
+  if (chapter.coverPhotoId && photosOnPage.some(p => String(p._id) === String(chapter.coverPhotoId))) {
+    chapter.coverPhotoId = remaining.length ? remaining[0]._id : null;
+    await chapter.save();
+  }
+
+  res.json({ ok: true, deletedCount: photosOnPage.length, remainingCount: remaining.length });
+}));
+
+// 11. Delete photo
 router.delete('/:id', csrf, asyncHandler(async (req, res) => {
   const p = await Photo.findByIdAndDelete(req.params.id);
   if (!p) return res.status(404).json({ error: 'Photo not found.' });
