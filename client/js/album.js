@@ -352,6 +352,26 @@ function scrapbookItems() {
   return flat;
 }
 
+function getChapterAllPhotos() {
+  const pages = getChapterPages();
+  const list = [];
+  const seen = new Set();
+  pages.forEach(page => {
+    page.forEach(item => {
+      if (item.type === 'media' && item.photo) {
+        list.push(item.photo);
+        if (item.photo._id) seen.add(String(item.photo._id));
+      }
+    });
+  });
+  (state.photos || []).forEach(p => {
+    if (p._id && !seen.has(String(p._id))) {
+      list.push(p);
+    }
+  });
+  return list.length ? list : (state.photos || []);
+}
+
 function mediaPageCount() {
   const pages = getChapterPages();
   return Math.max(1, pages.length);
@@ -1362,8 +1382,13 @@ document.addEventListener('click', async e => {
     if (e.target.tagName === 'VIDEO' || e.target.closest('video')) {
       return;
     }
-    const idx = parseInt(polaroid.dataset.photoIdx, 10);
-    if (!isNaN(idx)) openLightbox(idx);
+    const photoId = polaroid.dataset.photoId;
+    if (photoId) {
+      openLightbox(photoId);
+    } else {
+      const idx = parseInt(polaroid.dataset.photoIdx, 10);
+      if (!isNaN(idx)) openLightbox(idx);
+    }
     return;
   }
 
@@ -1540,9 +1565,16 @@ async function cyclePhotoSize(photoId) {
 // ----------------------------------------------------------------
 // 14. LIGHTBOX
 // ----------------------------------------------------------------
-function openLightbox(idx) {
-  state.lightList = state.photos;
-  state.lightIdx = Math.max(0, Math.min(idx, state.photos.length - 1));
+function openLightbox(target) {
+  state.lightList = getChapterAllPhotos();
+  if (typeof target === 'string') {
+    const foundIdx = state.lightList.findIndex(p => String(p._id) === String(target));
+    state.lightIdx = foundIdx >= 0 ? foundIdx : 0;
+  } else if (typeof target === 'number') {
+    state.lightIdx = Math.max(0, Math.min(target, state.lightList.length - 1));
+  } else {
+    state.lightIdx = 0;
+  }
   renderLightbox();
   $('#lightbox').classList.add('is-open');
   $('#lightbox').removeAttribute('aria-hidden');
